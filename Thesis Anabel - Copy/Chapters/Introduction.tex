@@ -1,0 +1,182 @@
+
+
+\chapter{Introduction} % Chapter title
+
+\label{ch:introduction} % For referencing the chapter elsewhere, use \autoref{ch:introduction} 
+
+%----------------------------------------------------------------------------------------
+ 
+This project will present how Docker containers are used to provide an application running in a container using only the necessary programs. Next chapters present how to create a scalable architecture increasing the number of containers and different ways to link them to get containers correlate with each other, this will be done by applying Software Defined Network that provide a new centralized network architecture using the OpenFlow switch OpenvSwitch.\\
+
+After the explanation of the functionality that Docker and OpenvSwitch provide the contribution of this paper is to change the default network configuration of Docker to link containers and introduce the SDN approach in the network infrastructure\\
+ 
+In general the methodology applied are the use of network namespaces with the process id of the containers and virtual Ethernet links. \\
+ 
+The service that is going to be explained in this paper is Network as a Service being part of the cloud computing type Infrastructure as a Service for management of a network using the centralized logical approach of controlling and forwarding through different infrastructures, this approach will be presented as an introduction for interconnection of the underlay network between hosts or virtual machines having containers running inside of them avoiding mismatching between this two networking modes. \\
+ 
+This paper will present all the difficulties and approaches that have to be taken into consideration for creating a Cloud infrastructure for providing services in an efficient scalable and flexible way with an analysis of the components that are being used with benchmarking to show the performance of each of this components.\\
+
+Next it will be presented the description of the overlay network infrastructure on docker and how it is used what is swarm node including how a node can become a master node and how the next nodes can join the cluster.\\
+
+After getting an understanding of how swarm cluster is created and why is it useful for the network configuration of the overlay network it is explained the multi-host networking.\\
+
+Finally it will be an experimental introduction of live migration and creation of checkpoints, what are they used for and an explanation of why there could be the need of migrating a container.\\
+ 
+\chapter{Framework, motivation and challenges} % Chapter title
+
+\label{ch:framework, motivation and challenges}
+
+\section{Framework}
+
+The paper is organized in four main parts. First it is going to be presented all the challenges motivations and goals of this project why to implement this approach what things have been learned.\\
+ 
+Then it is presented the research part of the work with all the terminology and description of the project and what should be done for creating a virtualized infrastructure and the main networking architectural components that have to be taken in consideration for an efficient approach for provisioning applications.\\
+
+The key things that are going to be explained in this part is how this different layers of virtualization can work without any disruption at the moment of scaling different components.\\
+
+It will present two different layers of architecture one within Docker containers and the other within hosts or docker-machine and all the difficulties that involve the interconnection of this two layers of virtualization, and the solution that provides Software defined Networks devices.\\
+
+This is divided in three main practical parts according to network virtualization in an overlay and underlay design with the contributions and the experimentation that had been done and all the problems that were presented along the process, and the third one with the migration of containers.\\
+ 
+And finally a brief summary of the project.\\
+ 
+\section{Motivation} 
+
+The motivation of this work is to try to solve the complexity of inter-connectivity between different layers of virtualization for provisioning services that will be scalable more flexible and that can fit to different needs of the users.\\
+
+Nowadays technology have become very accessible as a consequence of this many different projects have been created presenting a new layer of complexity for telecommunications to provide a solution for connectivity between different layers of virtualization, the aim of this project is to provide a network solution for having the services from different projects interconnected being time efficient and cost effective.\\
+
+This is will be provided by adapting different softwares to work together, Docker containers, OpenStack and OpenvSwitch.\\
+
+
+\section{Challenges}
+ 
+The challenges of this paper is to create an environment with the use of containers focusing on the Software Defined Networks implementation; this will be done with OpenStack which is an Open Source cloud operating system controlling storage, computation and networking resources and OpenvSwitch with the Open flow protocol.\\
+
+Throughout this document the OpenStack service that must be implemented for a correct interaction between controller and forwarding plane it is called the Neutron service and I will check whether provider network or self-service network is a better approach for this environment.\\
+
+The next challenge will be going to be focused on the use of the OpenvSwitch and its OpenFlow protocol which consists in a different approach of traditional networing where the desitions of routing and the forwarding of packets where computed in the same device but instead it splits this two in a control plane from where it receives and sends the routing desitions and a data plane for the fast forwarding of packets.\\
+
+Another challenge encountered is how to configure the overlay network and how it traditionally works explaining the swarm model and the load balancing of the containers.\\
+
+The final challenge is to configure a container with OpenvSwitch to create an isolation of the system and to make possible the migration of the infrastruvture without losing the containers state.\\
+ 
+\section{Goals}
+ 
+ 
+The goal of this paper is to manage a Network a different way than traditional networking where the vertical manner to operate a network was rigid therefore difficult to operate manage and control.\\
+
+The centralized logical control provided by SDN of a network increase the benefits of simplification of the modification of network polices, and provide the whole view of the system that will help to manage the infrastructure that will be created simplifying the development of sophisticated networks.\\
+ 
+This project will present different ways to interconnect containers, and one approach to interconnect them using virtual Ethernet links and the use of network namespaces, this approach will give an insight of how docker can be connected inside of a host for applying an OpenStack architecture and how to migrate from one host to another host without losing the state of a service.\\
+ 
+  
+\chapter{Scientific research and theoretical background} % Chapter title
+
+\label{Scientific research and theoretical background}
+ 
+ 
+This part of the document presents the terminology and explanation of needed tools to develop this thesis and the protocols and software that had been used for a most efficient and cost effective infrastructure for the architecture of a cloud environment for end-users as well as for the developers, to understand this approach it is necessary to know the most important features that this project is using.\\
+ 
+\section{Cloud computing}
+ 
+Is an internet based computing that uses remote data centers to store and manage services, the main goal of cloud computing is to adjust this services for different enterprise needs, as each enterprise is different, distinct services need to be provided; if the management of this services is easy to develop and it reduces storage, the performance and cost is reduced therefore the aim of cloud computing to provide a quality of service is achieved.\\
+ 
+Cloud computing is implemented as a pay-per-use basis therefore there are many deploying models next are presented the Cloud types:\\
+ 
+- Public Cloud it is basically the internet, the service provider manage its storage, it needs allocation of space hardware and control.\\
+
+- Private Cloud it is the most secure since different physical servers are dedicated to one single customer.\\
+
+- Hybrid Cloud it is the mix of physical and virtual servers used in public or private cloud models to reduce cost and increase flexibility.\\
+ 
+There are 3 different service models:\\
+ 
+- Software as a Service (SaaS) which provides ready to use applications.\\
+
+- Platform as a Service (PaaS) used for deploying applications.\\
+
+- Infrastructure as a Service (IaaS) for the management of the whole IT infrastructure.\\
+
+This paper will lean thowards the new Networking approach for management using the IaaS model.
+ 
+\section{OpenStack services}
+ 
+- Dashboard (horizon): is the web-based interface for managing OpenStack in an interactive manner and with the total view of all the OpenStack services configured.\\
+
+- Compute (nova): is the one in charge of the control of the hypervisors. It specially uses kvm, vmware.\\
+
+- Networking (neutron): This service enables the connectivity between OpenStack services and it has a pluggable infrastructure very usefull for interconnection between different other vendors and projects.\\
+
+- Object storage (Swift): It has a system of storing data by spreading the information in a lot of servers so then if there are errors occurring, the data will not be lost but found in other places.\\
+
+- Block storage (Cinder): it stores data in a sequence of bytes or bits so the external storage requirement is reduced.\\
+
+- Identity service (keystone): Provides the authentication of each service, it perform the functions of tracking and provide the information of where is the destination of the service by using their Application Programming Interface endpoint, it covers all the security between services and it stores its results in a database. \\
+
+- Image service (glance): it stores the disk and server images, providing the functionality of getting information about the state of the machine so it can be restored if necessary. \\
+
+- Telemetry (Ceilometer): it is the billing counter which monitor all the services and its scalability is very usefull for Internet Service Providers since it can easily provide the traffic information.\\
+ 
+The architecture for this project will not contain all the services of OpenStack since they are not all used to the development of the networking service, but for the developement of this thesis the most important are Neutron, Keystone, Nova and Horizon.\\
+ 
+ 
+\section{Software Defined Networks}
+ 
+Software Defined Networks it is a solution that decouples the controlling and forwarding of networks, it was first presented by a group of students that were testing the OpenFlow protocol that will be explained later in this paper.\\
+ 
+SDN introduces a new approach to improve the old management of a network ”It breaks the vertical integration by separating the network’s control logic (the control plane) from the underlying routers and switches that forward the traffic (the data plane)”\cite{1}\\
+ 
+The vertical manner to operate a network was created in order to obtain resilience in the earlier internet design but meaning also that this traditional networks where complex to manage and control.\\
+ 
+This new architecture is less error-prone, can easily react to network changed, as the controller have the global knowledge of the network it simplifies the
+development of sophisticated networks; it presents the next elements:\\
+ 
+-Forwarding Devices (FD): software or hardware devices created to perform different elementary operations.\\
+ 
+-Data Plane (DP): Interconnected forwarding devices. Switches and routers that forward the traffic.\\
+
+-Southbound Interface (SI): set of instructions for the forwarding devices.\\
+ 
+-Control Plane (CP): It is the network brain, it controlls the decisions\\
+ 
+-Northbound Interface (NI): Introduces an API to application developers\\
+ 
+-Management Plane (MP): is the set of applications implementing network control and operation logic.\\
+
+Traditionally forwarding devices where physical devices with embedded software taking autonomous decisions which now has changed with a SDN approach to remove network intelligence from the data plane and add it to an only controller rising a problem of communication and configuration compatibility\\
+
+For solving this problem the standard interfaces as OpenFlow are created enabling the interoperability among different data plane and control plane. Now with this approach, the use of dummy devices will lead to a decreasment of  the cost in equipment and mainteinance.\\
+ 
+\section{OpenFlow}
+ 
+A forwarding OpenFlow device is based on flow tables having three parts: matching rules, actions to be executed on matching packets and counters keeping the statistics of matching packets.\\
+ 
+The priority rules includes the next actions: forwarding packets to outgoing ports, encapsulation and forwarding to the controller, send to the next table, drop it, and send it to the normal pipeline process.\\
+When a new packet arrives the lookup process starts matching it with one of the table or dropping it.\\
+
+OpenFlow is one of the most accepted and deployed open Southbound standard in SDN.\\
+
+\section{Network virtualization and migration applied on this thesis}
+
+As cloud computing provide sharing resources everywhere and all the time on demand, the development of cloud services for different business needs have to be highly scalable and easily provisioned. \\
+
+As OpenStack provides different deployment scenarios docker will help to enclose configurations in containers such as small packages\\ 
+
+Docker dynamically configure the environment unlike traditional configuration management tools like ansible, chef or puppet which converge and restore states, before docker all possibility of rolling back to different states was by using VM images.\\ 
+
+Docker captures every change that is done creating a process id after a commit is done, similar to a version control system.\cite{2}\\
+   
+For creating the SDN infrastructure the main components that had been added are the OpenVswitch, docker containers and docker machines.\\ 
+
+OpenvSwitch is the one that will provide the controlled topology between containers inside the virtual machines, this approach will help to the efficient management and usage of the applications that are running in the container.\\ 
+
+The overlay bridge network provided by docker is the one that will provide the connectivity between the virtual machines.\\
+
+As an example for understanding better this purpose of inter-connectivity, we can imagine to have different virtual machine whereas in each of them there are running different services on containers which have to be interconnected, but the problem arises when containers are scaled up, if they need more resources they can be allocated into different hosts without downtime of usage or the knowledge of the client, meaning that if the client is using the service, and the container is changing the server the client must keep having the same service in the same point where it was at the moment of the migration. \\
+
+The solution for this is OpenVSwitch and the two modes of network virtualization that Docker provide and checkpointing of containers to freeze the state of the service: \\
+
+The underlay mode: The underlay network is a computer network built on top of another network, in this project we can view the underlay network as the network that provides an interconnection with the use of many virtual links between containers; the main idea is that a way of encapsulation must be introduced for decoupling this two different networks \\
+
+The overlay mode: this mode requires a Cloud software setup or docker-machine which are the virtual machines of docker, Docker introduce a pluggable architecture that can be stated at the moment of running a Virtual Machine giving the indications of the network architecture that we are interested to use, in the case of this thesis I have used the VirtualBox driver and overlay network driver. \\
