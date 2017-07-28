@@ -1,12 +1,14 @@
+
+
 \chapter{Introduction} % Chapter title
 
 \label{ch:introduction} % For referencing the chapter elsewhere, use \autoref{ch:introduction} 
 
 %----------------------------------------------------------------------------------------
  
-This project will present how Docker containers are used to provide an application running in a container using only the necessary programs to be lightweight, in the other hand this document present how to create a scalable architecture increasing the number of containers and different ways to link them to get many containers correlate with each other, this will be done by applying Software Defined Network that provide a new centralized network architecture using the OpenFlow switch OpenvSwitch.\\
+This project will present how Docker containers are used to provide an application running in a container using only the necessary programs. Next chapters present how to create a scalable architecture increasing the number of containers and different ways to link them to get containers correlate with each other, this will be done by applying Software Defined Network that provide a new centralized network architecture using the OpenFlow switch OpenvSwitch.\\
 
-After the explanation of the functionalities that Docker and OpenvSwitch provide the contribution of this paper is to change the default network configuration that Docker provide for interconnection of containers and introduce the Software Defined Networks in the network infrastructure\\
+After the explanation of the functionality that Docker and OpenvSwitch provide the contribution of this paper is to change the default network configuration of Docker to link containers and introduce the SDN approach in the network infrastructure\\
  
 In general the methodology applied are the use of network namespaces with the process id of the containers and virtual Ethernet links. \\
  
@@ -16,7 +18,9 @@ This paper will present all the difficulties and approaches that have to be take
 
 Next it will be presented the description of the overlay network infrastructure on docker and how it is used what is swarm node including how a node can become a master node and how the next nodes can join the cluster.\\
 
-After getting an understanding of how swarm cluster is created and why is it useful for the network configuration of the overlay network it is explained the multi-host networking and the container migration with checkpoints.
+After getting an understanding of how swarm cluster is created and why is it useful for the network configuration of the overlay network it is explained the multi-host networking.\\
+
+Finally it will be an experimental introduction of live migration and creation of checkpoints, what are they used for and an explanation of why there could be the need of migrating a container.\\
  
 \chapter{Framework, motivation and challenges} % Chapter title
 
@@ -32,9 +36,9 @@ The key things that are going to be explained in this part is how this different
 
 It will present two different layers of architecture one within Docker containers and the other within hosts or docker-machine and all the difficulties that involve the interconnection of this two layers of virtualization, and the solution that provides Software defined Networks devices.\\
 
-This is divided in two main practical parts according network virtualization in an overlay and underlay design with the contributions and the experimentation that had been done and all the problems that were presented along the process.\\
+This is divided in three main practical parts according to network virtualization in an overlay and underlay design with the contributions and the experimentation that had been done and all the problems that were presented along the process, and the third one with the migration of containers.\\
  
-And finally a brief conclusion and the future work.\\
+And finally a brief summary of the project.\\
  
 \section{Motivation} 
 
@@ -42,7 +46,7 @@ The motivation of this work is to try to solve the complexity of inter-connectiv
 
 Nowadays technology have become very accessible as a consequence of this many different projects have been created presenting a new layer of complexity for telecommunications to provide a solution for connectivity between different layers of virtualization, the aim of this project is to provide a network solution for having the services from different projects interconnected being time efficient and cost effective.\\
 
-This is will be provided by adapting different softwares to work together, Docker containers, OpenStack and OpenvSwithces.\\
+This is will be provided by adapting different softwares to work together, Docker containers, OpenStack and OpenvSwitch.\\
 
 
 \section{Challenges}
@@ -60,11 +64,11 @@ The final challenge is to configure a container with OpenvSwitch to create an is
 \section{Goals}
  
  
-The goal of this paper is to manage a Network a different way than traditional networking where the vertical manner to operate a network was rigid then difficult to operate manage and control.\\
+The goal of this paper is to manage a Network a different way than traditional networking where the vertical manner to operate a network was rigid therefore difficult to operate manage and control.\\
 
 The centralized logical control provided by SDN of a network increase the benefits of simplification of the modification of network polices, and provide the whole view of the system that will help to manage the infrastructure that will be created simplifying the development of sophisticated networks.\\
  
-This project will present different ways to interconnect containers, and one approach to interconnect them using virtual Ethernet links and the use of network namespaces, this approach will give an insight of how docker can be connected inside of a host for applying a n OpenStack architecture and how to migrate from one host to another host without losing connection.\\
+This project will present different ways to interconnect containers, and one approach to interconnect them using virtual Ethernet links and the use of network namespaces, this approach will give an insight of how docker can be connected inside of a host for applying an OpenStack architecture and how to migrate from one host to another host without losing the state of a service.\\
  
   
 \chapter{Scientific research and theoretical background} % Chapter title
@@ -72,7 +76,7 @@ This project will present different ways to interconnect containers, and one app
 \label{Scientific research and theoretical background}
  
  
-This paper presents some projects that are used for a most efficient and cost effective infrastructure for the development of a cloud environment for end-users as well as for the developers, for understanding this approach it is necessary to know the most important features that this project is using.\\
+This part of the document presents the terminology and explanation of needed tools to develop this thesis and the protocols and software that had been used for a most efficient and cost effective infrastructure for the architecture of a cloud environment for end-users as well as for the developers, to understand this approach it is necessary to know the most important features that this project is using.\\
  
 \section{Cloud computing}
  
@@ -153,7 +157,7 @@ When a new packet arrives the lookup process starts matching it with one of the 
 
 OpenFlow is one of the most accepted and deployed open Southbound standard in SDN.\\
 
-\section{Wrapping up: Network virtualization and migration}
+\section{Network virtualization and migration applied on this thesis}
 
 As cloud computing provide sharing resources everywhere and all the time on demand, the development of cloud services for different business needs have to be highly scalable and easily provisioned. \\
 
@@ -171,8 +175,8 @@ The overlay bridge network provided by docker is the one that will provide the c
 
 As an example for understanding better this purpose of inter-connectivity, we can imagine to have different virtual machine whereas in each of them there are running different services on containers which have to be interconnected, but the problem arises when containers are scaled up, if they need more resources they can be allocated into different hosts without downtime of usage or the knowledge of the client, meaning that if the client is using the service, and the container is changing the server the client must keep having the same service in the same point where it was at the moment of the migration. \\
 
-The solution for this is OpenVSwitch and the two modes of network virtualization that Docker provide: \\
+The solution for this is OpenVSwitch and the two modes of network virtualization that Docker provide and checkpointing of containers to freeze the state of the service: \\
 
 The underlay mode: The underlay network is a computer network built on top of another network, in this project we can view the underlay network as the network that provides an interconnection with the use of many virtual links between containers; the main idea is that a way of encapsulation must be introduced for decoupling this two different networks \\
 
-The underlay mode: this mode requires a Cloud software setup or docker-machine which are the virtual machines of docker, Docker introduce a pluggable architecture that can be stated at the moment of running a Virtual Machine giving the indications of the network architecture that we are interested to use. \\
+The overlay mode: this mode requires a Cloud software setup or docker-machine which are the virtual machines of docker, Docker introduce a pluggable architecture that can be stated at the moment of running a Virtual Machine giving the indications of the network architecture that we are interested to use, in the case of this thesis I have used the VirtualBox driver and overlay network driver. \\

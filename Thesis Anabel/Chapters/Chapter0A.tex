@@ -6,98 +6,46 @@
 
 \section{Appendix}
 
-TTSDASHBOARD interface with data needed to be parsed
+Network configuration in Virtual machine demo0.
 
 \begin{figure}[bth]
-{\includegraphics[width=1.2\linewidth]{gfx/ttsdashboard}}\caption[TTS Dashboard interface]{TTS Dashboard interface.}
-{\label{fig:ttsdashboard}
+{\includegraphics[width=1\linewidth]{gfx/demo0}}\caption[demo0]{demo0}
+\label{fig:demo0}
 \end{figure}
 
-Logfile index seen in kibana: 
+Network configuration in Virtual machine demo1
 
 \begin{figure}[bth]
-{\includegraphics[width=1.1\linewidth]{gfx/logfile}}\caption[Logfile index in kibana]{Logfile index in kibana.}
-{\label{fig:Logfile}
+{\includegraphics[width=0.7\linewidth]{gfx/demo1}}\caption[demo1]{demo1}
+\label{fig:demo1}
 \end{figure}
-
-\medskip
-\\
-\medskip
-
-
-\clearpage
 \\
 
-
-Rex file format for retreving data:
-
+Docker compose with the compute container.
 \begin{figure}[bth]
-{\includegraphics[width=1\linewidth]{gfx/logrex}\caption[Rex file format]{Rex file format.}
-{\label{fig:logrex}
-\end{figure}
+{\includegraphics[width=0.6\linewidth]{gfx/compose}}\caption[Docker-compose.yml]{Docker-compose.yml1}
+\label{fig:compose}
+\end{figure}\\
 
-Index view in Kibana
-
-\begin{figure}[bth]
-{\includegraphics[width=1.2\linewidth]{gfx/index}\caption[Kibana view of indices fields]{Kibana view of indices fields.}
-{\label{fig:index}
-\end{figure}
-\clearpage 
-
-Process of the creation of a new index:
 \\
- 
-\begin{figure}[bth]
-{\includegraphics[width=1\linewidth]{gfx/process}\caption[Process of creation of indices]{Process of the creation of new indices.}
-{\label{fig:process}
-\end{figure}
+Criu steps for the correct installation\\
 
-\clearpage
+After the installation of the components mentioned in section 6.3, I proceeded to add protobuf in the next way
 
+\begin{lstlisting}[language=bash,frame=tb,caption={Protoc}] 
+wget https://github.com/google/protobuf/releases/download/v2.6.0/protobuf-2.6.0.tar.bz2
+./configure
+make
+make check
+sudo make install
+protoc --version
+Protocol buffer version 2.5.0 is installed on your box.
+ldconfig
+\end{lstlisting}\\
 
-Data format represented in a tree:
-
-\begin{figure}[bth]
-{\includegraphics[width=1\linewidth]{gfx/tree}\caption[Hierarchy of the rex file]{Hierarchy of the rex file.}
-{\label{fig:tree}
-\end{figure}
-
-
-\clearpage
-\\
-	
-
-
-	
-Disk space allocation:
+Note: Sometimes the latest version of protocol does not load up. So we can do it manually by ldconfig, other versions of libprotoc must be deleted, and a new container with criu must be installed, in the next way:
 
 \begin{figure}[bth]
-{\includegraphics[width=1\linewidth]{gfx/initial}\caption[Initial allocation]{Inicial allocation.}
-{\label{fig:initial}
-\end{figure}
-
-
-Allocation before compression
-
-\begin{figure}[bth]
-{\includegraphics[width=1\linewidth]{gfx/without_compression}\caption[Allocation without compression]{Allocation without compression.}
-{\label{fig:without_compression}
-\vspace{-1.5em}
-\end{figure}
-
-
-
-Allocation after compression
-
-\begin{figure}[!ht]
-\vspace{-1em}
-{\includegraphics[width=1\linewidth]{gfx/with_compression}\caption[Allocation with compression]{Allocation with compression.}
-{\label{fig:with_compression}
-\end{figure}
-
-
-\begin{figure}[!ht]
-\vspace{-1em}
-{\includegraphics[width=1\linewidth]{gfx/kibana}\caption[Kibana]{Kibana.}
-{\label{fig:kibana}
-\end{figure}
+{\includegraphics[width=1\linewidth]{gfx/criu}}\caption[Criu]{Criu}
+\label{fig:criu}
+\end{figure}\\

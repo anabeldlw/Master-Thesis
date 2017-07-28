@@ -51,12 +51,15 @@
 
 %\include{FrontBackMatter/Titlepage} % Main title page
 \include{FrontBackMatter/AGHTitle}
-\include{FrontBackMatter/Titleback} % Back of the title page
+
+%\include{FrontBackMatter/Titleback} % Back of the title page
 
 % Dedication page
 
 %\cleardoublepage\include{FrontBackMatter/Foreword} % Uncomment and create a Foreword.tex to include a foreword
+\newpage
 
+\include{FrontBackMatter/Acknowledgments}
 \include{FrontBackMatter/Abstract} % Abstract page
 
 \pagestyle{scrheadings} % Show chapter titles as headings
@@ -87,16 +90,27 @@ This chapter will be mainly a representation of the functionality and performanc
 
 %------------------------------------------------
 
-\ctparttext{This part of the text will present the implementation of the ELK stack, the methodology and a description of the process that was executed and the evaluation of the final performance of the environment created} % Text on the Part 2 page describing the content in Part 2
-
-\part{Implementation and evaluation} % Second part of the thesis
+\ctparttext{This part of the project will present the overlay network, including cluster development with the swarm mode and the approach of isolating the OpenvSwitch component to provide a portable infrastructure solving the issue of replication of the content and resilience of the service provided}
+\part{Overlay Network} % Second part of the thesis
 
 \include{Chapters/Chapter02} % Chapter 2
+
+%------------------------------------------------
+
+\ctparttext{This chapter presents the terminology and uses of live migration, and how is it applied to this project, it gives a brief explanation of checkpoints and an experimental part of the checkpointing of a running container}
+\part{Container Migration} % Second part of the thesis
+
+\include{Chapters/Chapter03}
+
+
+
+
+\include{Chapters/Summary}
 ----------------------------------------------------------------------------------------
 %	THESIS CONTENT - APPENDICES
 %----------------------------------------------------------------------------------------
 \let\cleardoublepage\clearpage \appendix
-\part{Appendix} % New part of the thesis for the appendix
+\part{Appendix and Bibliography} % New part of the thesis for the appendix
 
 \let\cleardoublepage\clearpage \include{Chapters/Chapter0A} % Appendix A
 %\include{Chapters/Chapter0B} % Appendix B - empty template

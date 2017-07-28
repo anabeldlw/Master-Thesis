@@ -1,319 +1,195 @@
 % Chapter 2
+\chapter{Overlay Network} % Chapter title
 
-\chapter{Implementation and description} % Chapter title
+This part of the project was done in the same PC as previously explained but in the Windows Operating System with docker toolbox installed having a virtual machine called default running the docker engine, this was done to solve a problem occured by trying to run docker machines. \\
 
-\section{Elasticsearch configuration}
-To start with the project, the ELK stack was configured with the next versions: elasticsearch-2.3.1, logstash-2.2.2 and kibana-4.5.0. To change specific configurations, the scripts that have to be changed are the \texttt{elasticsearch.yml logstash.yml} and \texttt{kibana.yml}.
+The main problem that appeared in this part of the project on the Ubuntu 14.04 dual boot was that the kernel module failed to load,  therefore I had use the Windows Operating System.\\
+
+I had to turn on the hardware virtualization in the BIOS since docker has to have access to the core of the computer for running virtual machines and containers.\\
+
+For each container I added the basic configuration of a container using the repositories with the minimal configuration of OpenStack in the docker hub.\cite{8} \\
+
+After adding this configuration I logged in to each docker container to add the components that OpenStack needs to create a Networking environment for self Service Networks information that I found in the OpenStack documentation\cite{9} \\
+
+This part of the configuration is done because we want all the components to be virtualized and self dependent, for future developement of the project and for migration of the environment.\\
+
+If we have an environment that is not dependent of the hardware properties the provisioning of the services in terms of scalability and availability increase considerably.\\
+
+\section{Overlay Network interface in OpenStack and Docker} 
+
+OpenStack has to be configured to use firewall, Load balancer, routers, switches, GRE tunnels and VXLAN protocols as specified in the self-service network configuration.\\
+
+OpenStack as well as Docker containers use namespaces for networking meaning that a container with the same specifications can be given a different namespace with the same configuration, increasing the scalability of a system, the availability by replicating and the resilience by duplicating the containers for prevention of a possible failure, and without losing communication with its dependencies.\\
+
+As shown in the first part of the project this namespaces are stored in a database for the network discovery.\\
+
+Overlay interface: 10.0.1.0/24 which we will be using in the docker compose or creations of virtual machines.\\
+
+\begin{lstlisting}[language=bash,frame=tb,caption={OVS configuration in OpenStack}]
+[ovs]
+bridge_mappings = provider:br-provider
+local_ip = 10.0.1.0/24
+[agent]
+tunnel_types = vxlan
+l2_population = true
+[securitygroup]
+firewall_driver = iptables_hybrid
+\end{lstlisting}\\
+
+Following the steps of the configuration after all the containers where configured:
+for the docker daemon to be available, the default virtual machine must generate TLS certificates, to secure all communications between the servers and the web browsers.\\\
+
+Then I created the Dockerfile and dependencies and deployed the configuration:\\
+
+\begin{lstlisting}
+$docker-machine regenerate-certs default
+$docker-machine restart default
+$eval $(docker-machine env default)
+$docker build -t <image_name>.
+<dot> specifies that configuration files are located in the current directory
+$docker images # to check the image is created.
+\end{lstlisting}
+
+
+Running the app in my physical host: \\
+\begin{lstlisting}
+$docker run –p <Host_port>:<container_port> <image_name>
+\end{lstlisting}
 \\
 
-The default port for elasticsearch is 9200 and for kibana is 5601 both of this specifications and modules explained previously in this document can be changed in the respectly yml configuration files as well as with the elasticsearch REST APIs.
-\\ 
+\section{Docker containers inside of virtual machines}
 
-To create an Elasticsearch Cluster, i added two new instances, with the parameteres shown below:
-\\
+This part of the project explains the simulation of a clustered environment, and it was don for two main reasons.\\
 
+First to balance the load of the containers from one virtual machine to other virtual machines, creating a resilient environment.
 
-\noindent \begin{tabular}{|c|c|c|c|}
+And second to check how the overlay plugin works to add to the configuration of the SDN environment with OpenvSwitch.\\
 
-	\hline
-	Name & Elasticsearch-new & Elasticsearch-2.3.1 & Elasticsearch-1 & 
-	Node name & node-1 & node-2 & node-3 &
-	Network host & 172.16.98.133 & 172.16.98.133 & 172.16.98.53 \\ 
-	\cline{1-4}
-\end{tabular}
-\\
-\\
+For the creation of this docker provides docker-compose files which are files written in yaml language having all the descriptions for a creation of a virtual machine such as number of cpu's, network driver used, the services or containers that are going to run in this machine, etc.\\
 
-For this to work properly the transport and discovery modules had to be enabled in the configuration files so the internal communication within the nodes in the cluster can be established and for the nodes to discover each other.
-\\
+First  I created the docker-compose file that it is used for running various container applications at once this information I learned in the docker documentation an example of my OpenStack configuration it is attached as docker-compose.yml in myvm1.\\
 
-The most important parameter for a node to join the cluster is the name they must all have in the configuration files the same name  for joining the cluster by default it is elasticsearch.
-\\
+Next I started a virtual machine on docker using the virtualbox driver and copied the docker-compose file in the virtual machine and then I deployed the services.\\  
 
-The discovery module used is the built in discovery module for elasticsearch and by default, it provides unicast discovery, but can be extended to support cloud environments and other forms of discovery \cite{2}.
-\\
+\begin{lstlisting}
+$docker-machine create –-driver virtualbox myvm1
+$docker-machine scp docker-compose.yaml myvm1:~
+$docker-machine ssh myvm1 ''docker stack deploy -c''
+\end{lstlisting}
 
+Attached in the apendix is \autoref{fig:compose} which is an example of the docker-compose file.
 
-This was done buy running 3 different instances in different servers, for testing there where available the next Servers for development.
+\section{Docker Overlay network}
 
-\paragraph{Servers provided by the company}
+To understand how Docker works from the core of the overlay network I created an environment to store each of the containers in different virtual machines, and I started creating a cluster called Swarm in docker.\\
+
+Docker uses a plugin for the network configuration called overlay, with the architecture to cover the multiple virtual machines.\\ 
+
+\section{Cluster}
+
+A service cluster is a multiple number of servers that communicate with each other to provide service to clients. A cluster provides high availability, scalability reliability to a system in any case of failure; if a server shutdown somehow the service won’t stop serving but instead it will distribute the workload to other servers.\\
+
+Swarms are a group of machines that are joining the cluster in docker. After a machine joins a swarm the node that joins the cluster will provide resilience, since at the beginning there was a single point of failure.\\
+
+Now having two nodes in a cluster, if one node goes down the other node that will have all the data needed to perform any actions will respond for the call that had to be answered by the node that went down.\\
+
+\subsection{Minimal number of nodes}
+
+It is very important that the master eligible nodes do as little work as possible since master nodes can behave as a controller nodes.\\
+
+The minimum number of master eligible nodes in order to join a cluster must be 2 and the most appropriate at the moment of building an infrastructure follows the split brain prevention theorem:\\
+
+The minimum number of master eligible nodes in order to join a cluster must be 2 and the most appropriate at the moment of building an infrastructure follows the next equation:
+\begin{equation}
+(master\_elegible\_nodes / 2)+1
+\end{equation}
+
+In order to explain this, lets suppose a case when there are 3 nodes in the cluster and there is a network failure.\\
 \begin{itemize}
-\item ncerndobedev68.etv.nce.amadeus.net
-\item ncerndobedev69.etv.nce.amadeus.net
-\item ncerndobedev70.etv.nce.amadeus.net
+\item In the \texttt{First case} if there is only a master node as soon as the two parts of the cluster are not communicating each other they cannot find the master node and choose themselves as a master creating a split brain, and when joining the cluster for the second time  one of this master eligible nodes will have to be restarted loosing all its information.
+\item In the \texttt{Second case} if the minimum master nodes is 2, one of the nodes wont see another master eligible node so it wont be able to choose itself as a master node, when the communication is restored it can join again the cluster and work normally 
 \end{itemize}
 
-\\
+\subsection{Number of nodes in OpenStack}
+In OpenStack it is established in the configuration files the quorum which it must be a number higher than \begin{equation}
+floor(n/2) + 1 
+\end{equation} to avoid split brain\cite{10}
 
-The plugin marvel was configured and installed to ease the manage and the view of the cluster.
-\\
- 
-Since as in the first part of this document explained there is the need of at least 3 diferent instances of Elasticsearch storing the nodes for avoiding split brain, I used the same server for running two elasticsearch instances just to check the shards allocation and status of the cluster. 
-\\
+\subsection{Docker cluster}
 
-The status of the cluster became green and therefore the shards where replicated and stored among the different elasticsearch instances in the cluster; this is a good alternative for resilience of the data and for avoiding data loss. 
-\\
+To check how to develop a cluster with docker containers inside, I added the configurations of an app written in python and the docker file, to deploy the application.\\
 
-But since the most important for this project was to decrease as much as possible the data storage this was not the best option, but a good way of learning the allocation of shard replicas and documents.
-\\
- 
-\section{Logstash file configuration}
+In this section I added a box with an app that displayed the number of times a visitant entered to the page and the id of each container after refreshing the page, adding 5 replicas of the same container among 2 virtual machines exposing to the port 80; and a visualization of the containers spread along the virtual machines exposed to port 8080.
 
-The first statistical overview that had to be performed, was for the final status of the regressions; since all the scripts per product are running at night and there are scripts failing, recovering and keeping their status, the need of an analysis of this data for reporting was highly important.\\
+\paragraph{Why do we need load balance of containers?}\\
 
-The process to retreive the necessary data was with the use of logstash creating a configuration file that is running all the time, for knowing the status of the scripts in real time.\\
+The heavy loaded servers and multiple computations that need to be executed leads to the problem of directing the containers in the correct virtual machines for the correct performance and an efficient usage of resources.\\
 
-The necessary parameters that are needed to retreive and analyse this data are:\\ 
-\begin{itemize}
-\item The \textbf{input} plugin in which must be defined the file path from which the data is going to be extracted, in this case the filepath of the log files that contain the status of the regressions. 
+Therefore docker provide load balance of docker containers with the multi-host networking, next explained.\\
 
-\begin{lstlisting}[language=xml,frame=tb,caption={input plugin},label=lst:useless]
-input {
-file{
-path => "/remote/dspreg/status/RPT*/Dev/last/*/*.log"
-type => "logs"
-}} 
-\end{lstlisting}
+\section{Multi-Host networking, load balance of containers in VMs and docker cluster}\\
 
-\item The \textbf{filter} plugin the one that will parse and group the data according to the needed parameters; in this case needed information was to retreive only some information from the log files.\\
+For multihost networking, docker provides the overlay network driver, but in difference to the normal architecture for docker containers with bridges, the overlay driver needs either a docker engine running in swarm mode or a cluster of hosts using a key value store. \\
 
-At this moment the specifications that are given to logstash is to retreive all the data that is contained in all the files previously asigned. 
-\\
-
-But what we would retreive in this case is only the raw data. For the processed data, one of the most usefull filter is the one explained in the logstash section, the grok filter, it offers the functionalities of regular expressions to matche all the lines that follow some pattern in a file.\\
-
-Next are shown the log pattern that must be matched and its correspondent grok filter. It is important to notice that for this part much more filters where used to process the data such as mutate filter to remove fields that will be displayed in kibana or date filter to retreive different patterns of data
-\end{itemize}
-\begin{lstlisting}[language=xml,frame=tb,caption={logfile }]
-2016-03-30 14:45:03,749 - FO_Line/FO_star/15-segmentAssociation/15-segmentAssociation.cry [root (data.py:auto_load_data:25)] [INFO] Loading data from D:\tts_shared\git\dev\regression_fo_line\data\common\common.py
-\end{lstlisting}
-
-\begin{lstlisting}[language=xml,frame=tb,caption={input plugin}]
-filter{
-grok{
-match => { "message" => "%{DATA:time}- %{DATA:script_path} \[%{DATA:logger} \(%{DATA:filename}\:%{DATA:function_name}\:%{DATA:line_number}\)] \[%{DATA:level}] %{GREEDYDATA:content}$
-}}
-\end{lstlisting}
-
-\begin{itemize}
-\item The \textbf{output} plugin provides the destination for the data, in this case we used the elasticsearch cluster, with the information of the hosts that are going to receive this data and the name of the new index with two different kind of formats, \texttt{"index\_name"} or \texttt{"logstash-index\_name-YYYY.MM.dd"}  \autoref{fig:Logfile}.
-\\
-
-The second one with its specific elasticsearch data pattern for the organization of the data to be searchable by a time frame; and the standard output for this case a json document to facilitate the search
-\end{itemize}
-
-\subsection{Analysis of the logstash file configuration} 
-After the installation of the ELK stack, and the logstash-logfile index previously explained, there was an importat factor that impacted the disk space in the node.
-\\
-
-Elasticsearch for disk shard allocation uses a configuration called \texttt{low watermark} and \texttt{high watermark}, to stop allocating new shards when it reaches a specific limit and to relocate shards in other nodes respectively. 
-\\
-
-This configuration can be changed in the \texttt{elasticsearch.yml} configuration files with the information of the time interval for checking the disk space in the cluster.
-\\
-
-The cluster in production is configured to stop retreiving data when the free disk space will have at least the same size as the one of the data that will be pushed.
-\\
-
-The index logstash-logfile size produces daily between 10 to 30 Megabytes, for my user the total amount of free disk space is 10G, acordingly to this data, the need of decreasing the amount of data is highly necessary.
-\\
-
-The steps that where taken to solve this problems where first to stop the logs being available after 7 days and next the compression of the data which will be explained further in next sections 
+To create a new network driver first I created the cluster with the key value store. The key value have the network state information, endpoints, IP addresses, etc.\\
 
 
-\section{Rex files}
-
-Rex files are scripts containing the description of the transactions (the line or lines in a script failing or passing).
-\\
-
-This rex files parse the logfiles with the information that contains the TTSDashboard with parameters such as transaction counter, status ("KO", "OK", "N/A"), expected value, received value, query.
-\\
-
-The logs of this files where pushed and parsed into elasticsearch each hour, but nevertheless there were some fields that where lacking and some that where not needed.
-\\
-
-To parse this rex files instead of using a logstash file configuration it was used a python script since there was a lot of files that had to be parsed with different paths and formats.
-\\
-
-In \autoref{fig:ttsdashboard} it can be seen the fields transaction in the left part of the figure, query at the top, expected and received in the lower part of the figure. This  information is the one that represents the failure or passing of the scripts.
-\\
-
-This data is the one needed by the monitoring team to provide full reports of the status of the scripts, taking in consideration that there is a big amount of scripts and a big amount of transaction per each script, the extraction of this fields is very important to check the pattern of the errors and for correcting them inmediately.
-\\
-
-Considering the amount of data that had to be parsed, it was more efficient to use a python script to give more explicit specifications, this was done using different python libraries among all of them the most usefull are the ones explained in the next section.
-
-\section{Creation of indices}
-
-For the creation of new fields there are many different strategies, as previously shown they can be created with the logstash configuration files and with the index API in this ones there can be specified the number of shards and replicas, meaning that the number of times a document is splitted and replicated.
-\\
-
-For doing operations with multiple indices, and multiple fields for the documents, I have used the next API's and libraries it is worth to say that while indexing a document the format is similar; first a json object that indicates the fields that are going to be pushed, then the name of the field and the id of the documents. 
-
-\paragraph{pyelasticsearch} Pyelasticsearch makes the conversion between Python datastructures and JSON to be understood by ElasticSearch. For example date and datetime format for es 2016-04-23T14:26:01.
-\\
-
-Next it is shown the creation of a new index with a small example of the json object used to create different fields and wich can be seen in kibana in \autoref{fig:index}
-\\
-
-\begin{lstlisting}[language=xml,frame=tb,caption={Creation of a new index}]
-es.index("known_errors_index-" + import_day, "logs", data, id=data["custom_id"])
-\end{lstlisting}
-
-\begin{lstlisting}[language=xml,frame=tb,caption={Json object}]
-		data = {
-		"file_id": "file_" + hash_file,
-		"env": test_environment,
-		"product": product,
-		"status": status,
-		"short_filename": short_filename,
-		"transaction_counter": transaction_counter,
-		"expected": expected,
-		"received": received
-		}
-
-\end{lstlisting}
-
-
-
-\paragraph{Bulk indexing} One of the most important methods for adding a new index are: Bulk indexing methods, which perform many actions as: create, delete,update. 
-\\
-
-The parameters that can be added in this method are: actions \texttt{Index\_op()}, \texttt{delete\_op()}, \texttt{update\_op()}, \texttt{bulk\_chunks()}.
-
-\paragraph{Index} Index is the method that put a JSON document into a specific index to make it searchable.
-\\
-
-\textbf{Process:}\autoref{fig:process}
-\begin{itemize}
-\item Parsing from a directory 
-\item Convert transactions into a python dictionary
-\item Convert the dictionary to a json object
-\item Send to redis
-\end{itemize}
-
-After analysis of the rex file there were some fields that where not retreived. In this part of the project it was used the module ElementTree, because XML has an inherently hierarchical data format which can be represented with a tree \autoref{fig:tree}. 
-\\
-
-Element Tree provision the interactions with the whole document for parsing searching modifying and building XML files.
-The purpose of using Etree is for parsing the XML file and to retreive the needed content.
-\\
-
-From the XML file parsed the attribute value must be extracted from the variable attribute, for doing this Etree has a Xpath support. Xpath is a module that has the capability of locating the elements in a tree.
-\\
-
-For the next part of the project there were some python files that had to be improved from some scripts that were used already to parse data. 
-\\
-
-Next there was an index needed to process all the include that contained each script, the process to do it was first to check the repository and then clone or update it; then to use a subprocess that will search with GREP in all of the scripts an include message and it will push all the date into elasticsearch as shown in next figure the architecture used.
+For this 2 machines have been created while one is the master, \autoref{fig:master} presents the virtual machines created with the master node represented by a "*" and the other nodes that joined the cluster, we can see the default node as well which contains the docker engine configuration\
 
 \begin{figure}[bth]
-{\includegraphics[width=1\linewidth]{gfx/architecture}}\caption[Script architecture]{Script architecture.}
-{\label{fig:architecture}
+{\includegraphics[width=1\linewidth]{gfx/master}}\caption[Master node and slaves in Docker]{Master node and slaves in Docker}
+{\label{fig:master}
 \end{figure}
 
-
-\section{Ignore and re-enter}
-
-There where a lot of errors in the scripts giving an information of ignore and re-enter, the next thing i had to do is to add a new index for this kind of errors, so later they can be easily searchable.
-\\
-
-The exception was that for each transaction in a new file, the new index must be created only taking into consideration the first transactions while the next ones omitted. 
-\\
-
-So after parsing each rex file a boolean is added setting it to false, after the parsing of the transaction and when an Ignore and Re-enter is found the new index is created and then the boolean is set to true for the next transactions so they are not taken into account.
-\\
-
-This error was created since at night the regressions were constantly running and some times in the same file and transaction the error ignore and re-enter apeared and next it dissapeared this was performed in the same way as previously.
-
-\section{Data compression}
-
-The memory allowed for users in the company was 10Gb, since elasticsearch was overloading the server for the amount of data that was parsed and as soon as the projects that the company receive will increase the performance of elasticsearch will decrease. 
-\\
-
-To avoid this to happen it is need to apply a mechanism for compression. First to study the performance with and without compression, there were performed some tests. First the initial state of the cluster, then the cluster without compression adding  3 new indices logstash-transaction index, known-errors-index and logstash file.
-\\
-
-With data compression there is a decreasement of the 38\% of the disk indices usage, this was shown after tests done while indexing 2 new indices logstash-file and logstash transaction, explained in the table below.
-\\
-
-\noindent \begin{tabular}{|c|c|c|c|}
-\cline{1-4}
-Status & Initial & Without compression & with compression & \hline 
-Total allocation[mb] & 255.1 & 465.9 & 425 & 
-logstash-transaction[mb] & - & 204.6 & 165.4 & 
-known-errors-index[kb] & - & 121.5 & 130.2 & 
-logstash-file[mb] & - & 6.4  & 5.6  \\
-\hline
-\end{tabular}
-\\
-\\
-
-
-The algorithm used is Deflate, the same one used behind zip, gzip and png; the deflate algorithm uses a combination of the LZ77 algorithm and the Huffman code, both lossless data compression algorithms so they can be perfectly reconstructed after retrieving the data
-\\
-
-LZ77, works finding the data that is repeated
-\\
-Huffman code It combines the weighing the nodes accordingly its frequency of appearance, and changing this into a binary tree, the weights can generate many trees 
-
-\section{Kibana visualizations}
-
-After parsing grouping and organizing the data in the web interface of kibana there are many options to create vizualizations and dashboards. 
-\\
-
-In this part is where it is visible the need of the specific date pattern format since every search can sorted by a specific data range. 
-\\
-
-The searches can be porformed with the REST API and it can be applied in many different scenarios. One of the examples of this kind of search is the one used to write the creation of a python script that will send mails with the information of the status of the regressions.
-\\
-
-With the index created known errors which is the one holding the data of the "Ignore and re-enter messages", and the index logstash-transaction holding all the number of executions performed per day storing all the transactions, it was able to make a comparison of the number of scripts executed versus the Ignore and re-enter encountered in the scripts.
-\\
-
-The format of the query was the next: 
-\begin{lstlisting}[language=xml,frame=tb,caption={query example}]
-{"aggs": {"executions": {"terms": {"field":"Product.raw","size": 100},
-"aggs": {"theSum": {"sum": {"field":"Number_of_Executions"}}}}}}}
+For the overlay network:
+\begin{lstlisting}
+$ eval $(docker-machine env --swarm mhs-demo0)
+$ docker network create --driver overlay --subnet=10.0.1.0/24 my-network
 \end{lstlisting}
-\medskip
+
+Creating the network configuration: \autoref{fig:outside} shows the configuration of the links between docker machines and the created overlay network called my-network for the intercommunication between docker-machines that have inside docker containers.\\
+
+\begin{figure}[bth]
+{\includegraphics[width=1\linewidth]{gfx/outside}}\caption[Network overlay configuration]{Network overlay configuration}
+\label{fig:outside}
+\end{figure}
+
+In the appendix \autoref{fig:demo0} and \autoref{fig:demo1} shows the configuration of the 2 virtual machines created demo0 and demo1 both hosts are running with the same network id, the same of my-network network, meaning that the multihost network is ready. Next for running an application we need to change the environment to the swarm master and run containers from the master and not from the slaves.\\
+
+This configuration works in the next way: \\
+
+First the mh-keystore is the master node of the configuration, all the instructions that we want to give such as location of the containers within the clusters or the number of replicas that we would like to add for the resilience of the service is given by this master node.\\
+
+The assignment of master and slaves is helpful for the distribution of the data, the master node will have all the information about containers and how do they work, and the slaves will operate and run each particular service.\\
 
 
-The aggregations framework helps provide aggregated data based on a search query. It is based on simple building blocks called aggregations, that can be composed in order to build complex summaries of the data \cite{2}.
+Following the steps of this configuration but implementing OpenvSwitch to the infrastructure to meet the SDN model the service must be isolated.\\
+
+For this it would be very useful to create a container with all the modules and services that are needed to run OpenStack, since containers have all the inter-process communications within the container itself, the computations will be executed inside of the container and it will become a more portable infrastructure.\\
+
+\section{OpenvSwitch configuration for a container deployment}
+
+This part of the project was applied to implement an isolation of the networking component.\\
+
+Because OpenvSwitch is the one that will have all the configuration and information of the location of each container.\\
+
+First in boot2docker which is the virtual environment in which docker is working (we may think of it is as the virtual machine manager), we need to enable the OpenvSwitch kernel module as explained in the architecture of OpenvSwitch in previous sections.\\
+
+Then adding the configuration for the connectivity of the containers as it was shown in the first chapter with the OpenvSwitch.\\
+
+This configuration will be saved after commiting the container, but the configuration of the virtual environment must be previously added manually in every environment.\\
 \\
 
-Aggregations can be used to group the data or to sort the data by some specific filters, it is a very usefull tool for only retreiving the necesary data; in this project it was many times used for the organization of data and search of various fields filtering the answers.
-\\
+\begin{lstlisting}
+modprobe openvswitch
+docker run –itd –-cap-add NET_ADMIN socketplane/openvswitch
+docker exec <container id ovs> ovs-vsctl add-br s1 
+\end{lstlisting}
 
-Finally and for concluding with the complete usage of ELK Stack the last task that had to be done was to create different visualizations and statistical graphs of the data parsed.
-\\
+Note: It is important to notice that I had to do this with my virtual environment since I was using Boot2docker in windows.
 
-Kibana interface offers 4 bookmarks: Discover Visualize, Dashboard, and Settings.
-\\
+\section{Problems and Solutions}
 
-In discover, there is a listed view of all the indices and documents, that had been extracted and pushed in elastic.
-\\
+As previously explained in the use of swarm node, the docker toolbox for windows uses swarms to add the docker engine to the nodes.\\
 
-In visualize there are different tools to create graphs pie charts, area charts, data tables to display the count of the document indexed, etc.
-\\
-
-In the dashboard bookmark can be added all the visualizations for displaying different types of analytics and to organize different views of the data.
-\\
-
-The settings bookmark is the one the one that is used from the begining to have the data that was pushed into elasticsearch the index pattern must be created here, indicating either if it uses a time-base event format or just an index name or pattern.
-\\
-
-If there is a time based index pattern, there is a field called Time-field name that can be used to sort the data in a time basis.
-\\
-
-Various visualizations where created at this point of the internship, with the index created and the analitics that where needed. \autoref{fig:kibana}
-
-\section{Analysis and results}
-
-After checking the final status in kibana, the indices Known\_errors\_index, logstash-logfile and include where created the shards where completely allocated, for the logstash-transaction files various documents where modified and added.
-\\
-
-The logstash configuration files where used for the creation of the logstash-logfile, and bulk indexing libraries for the creation of the two next indices, afterwards whith this data, vizualizations and reports where created to give an analysis of the specific data that was pushed into elastic.
-\\
-
-After the use of specific modules the elastic cluster was configured and the compression of the indices showed a 38\% of decreasement in the indices disk space usage. 
+Since the docker engine is the one in charge of the management and storage of information such as process id and state of the containers, in the next chapter because the migration of the containers must be an independent architecture detached from the operating system we need the docker engine to work as a manager for this connections therefore for the next part of the project I will not be able to use the docker toolbox for Windows
