@@ -1,0 +1,198 @@
+% Chapter 1
+
+\chapter{Introduction} % Chapter title
+
+\label{ch:introduction} % For referencing the chapter elsewhere, use \autoref{ch:introduction} 
+
+%----------------------------------------------------------------------------------------
+
+In this document it is described the implementation of ELK tools for the development of an infrastructure for storing searching and analysing data.\\
+\\
+There are presented many methods to collect search and display data to facilitate the search for content, taking into account various parameters needed by the company such as search performance, fast throughput, functional resource allocation and compression. \\
+\\
+The fundamentals for analysing data is to understand it, for an effective implementation and management of the resources and tools it is required to know the needs of the business, the amount of resources to choose the best tools to implement, etc.\\
+\\
+Therefore this document is divided in two main parts one for the comprehension and compilation of all the information needed to proceed with the tasks and the next one for the explanation of the implementation and detailed view of the final state of the project with its evaluation. \\ 
+\\
+\begin{itemize}
+\item The first part explains first the Company with its team tasks, the software used and the search methodology used before the implementation of ELK software, the resources provided and the key issues and difficulties that might be encountered through the process of installation,  in order to have a big picture of the problem to solve.\\
+\item Next it will be explained the ELK stack and all the components that were used in this project, the explanation of Elasticsearch, Logstash and Kibana, all the modules that will be executed and its functional and flexible architecture.\\ 
+\item Furthermore an overview of the Elastic cluster, its nodes and modules, all the terminology that is important to understand from the ELK stack architecture.\\ 
+\item The second part of the document present the use of the studied components and the explanation of the implementation of each one of the components in the stack.\\
+\item Next it will be explained all the formats and types of data that will be collected that was required for the company to log in the server.\\
+\item The algorithms for compression and the load of the cluster will be introduced in the final part of this document, with all the decisions that had been taken to improve the performance of search and allocation.
+\item Finally a brief analysis and the results if the optimization of the infrastructure. 
+\end{itemize} 
+
+\chapter{Description of the problem}
+\section{Description of the company and Aim of the project}
+A very important factor for the definition of the problem is the organization of the material and intensive study of the resources, limitations and  demands of the environment. For a general study of the problem, the company and tasks are explained following. \\
+\\
+Avisto partner of Advans Group, is a company that provides software solutions for many entities around France, it was founded in 1999 in Sophia Antipolis. \\ 
+\\
+Avisto is working together with Amadeus company, to provide the creation, monitoring and automation of scripts for the billing, ticketing, booking, etc. At the time of purchasing flight tickets with the Amadeus software. \\ 
+\\
+There are three team tasks:  
+\begin{itemize}
+\item\texttt{Coverage:} Its global responsibility is of the creation of new scripts after a test plan 
+\item\texttt{Automation:} it is in charge of the  Improvement and strengthen of Amadeus scripts 
+\item\texttt{Monitoring:} Controls the monitoring and investigation of all the regressions of all projects from both coverage and automation.
+\end{itemize}
+
+The aim of this project is to optimize tools for the monitoring and investigation of scripts  collecting the scripts information, adding and organizing the data in a ELK server and  then displaying the data in a web interface(Kibana), for a further analysis.
+
+\section{Environment and tools}
+
+\text{TTS DASHBOARD} \autoref{fig:ttsdashboard}}:
+It presents all the scripts and transactions (lines or group of lines in a script), it uses git repository to update the scripts and connect to the server.
+\\
+ 
+For each of this scripts there are 3 different environments(software release Amadeus):
+\begin{itemize}
+\item PDT (Product Definition Test System)
+\item FRT (Function Regression Test)  FVT(Function Validation Test)
+\item UAT (User Acceptance Test)
+\end{itemize}
+For PDT and UAT there are a daily new versions of the system under development, on FRT there are the system pre-production.
+\\
+
+This scripts are presented in the TTS DASHBOARD which push the scripts that are stored in a Redis server, with the use of crontab each hour. \\
+
+This scripts each have transactions with the information of the status \texttt{“OK”, “KO”, “N/A”}, this information is very useful for the monitoring team which will be explained next.\\
+
+For each of this 3 environments there is a team which has to monitor all the regressions in this environments for each product and send reports of the status of the script of each product. For this to be more effective there was the need of adding ELK stack to optimize the search and the filtering of the scripts. \\ 
+\\
+
+\chapter{Tools description and functionalities}
+\section{The ELK stack}
+
+The ElasticStack is composed of many different projects; to acomplish my experimentation I have used the set of projets to take data from different sources, format, search and analyze in real time. \\
+
+The three most important projects that will be explained in this document are \textbf{Elasticsearch, Logstash} and \textbf{Kibana}. \\ 
+
+The \texttt{Elasticsearch} project search data with the help of query language covering structured, unstructured and time-series data. \\ 
+
+Elasticsearch is based on Lucene a very powerfull search engine, to index and search through full text. Elasticsearch became a project of Lucene to ease the use of this tools to index and manage the data.
+\\
+
+Elasticsearch now it is used by a big range of companies such as Facebook, Wikimedia, Mozilla, Amadeus IT Group, Netflix. etc. 
+\\
+
+\texttt{Logstash} process lists of logs events and structured data with a pluggable infrastructure with inputs, filters and outputs. \\ 
+
+\texttt{Kibana} offers the visualization platform that allows to interact with the data.
+
+\subsection{Elasticsearch}
+\texttt{Elasticsearch} is used for gathering and searching data with the help of query language covering structured and unstructured data. 
+\\
+
+\texttt{Elasticsearch} manages the performance of the cluster the storage and the management of data througout the node or nodes. 
+
+\subsubsection{Elasticsearch parameters} To understand the elasticsearch performance it is important to have an insight of the glosary of the elements that an \texttt{Elasticsearch} infrastructure presents and the functionalities that it has.   
+\begin{itemize}
+
+\item \texttt{Index}: Collection of documents with similar characteristics.
+\item \texttt{Documents}:  Is the serialization of a JSON object with the names of some properties and its values,
+\item \texttt{Type}: It is a logical category.
+\item \texttt{Node}: It is a running instance of elasticsearch by default it takes names of Marvel Characters, it  joins automatically a cluster called Elasticsearch.
+\item \texttt{Shards}: Are subdivided indices into multiple pieces, so documents can be stored in different disks avoiding the possibility of not fitting in the disk of a single node , or of being too slow serving requests.
+\\
+
+The shards allow to horizontally scale, they are split to avoid network failures, if a shard goes offline there will be a backup.
+\\
+
+Replicas shards are never allocated on the same node an Elasticsearch cluster is made up of one or more nodes. Each of these nodes contains indexes which are split into multiple shards and then placed on various nodes throughout the cluster.\\
+\\
+
+There are three different shards that can be:\\
+
+\texttt{Red}: when primary shards are not ready.
+
+\texttt{Yellow}: the shard replicas had not been allocated, so the cluster consist of only one node.
+
+\texttt{Green}: when the cluster is fully operational and can allocate the shards and replicas in different machines in the cluster.\\
+\end{itemize}
+
+\subsubsection{Elasticsearch Modules}
+
+\texttt{Elasticsearch} contains modules with many functionalities; these modules can be static configured in the \texttt{elasticsearch.yml} file or dynamic with the cluster API. There are 13 modules from the wich i have chosen and configured the next:
+\paragraph{Marvel} With this module we can connect and search in the elasticsearch instance, with an HTML based interface.
+\paragraph{Transport} The transport module is used for internal communication within the nodes in the cluster, the communication is asynchronous, so it solves the c10k problem for optimization of network to handle many sockets at the same time 
+There are many factors considered for the optimization of this network sockets
+
+\marginpar{Concurrent connections (efficient scheduling of connections) is not directly proportional to the Requests per second(high throughput)}
+\paragraph{Discovery} The discovery module is the one responsible of discovering the nodes in the cluster and electing a master node.
+\\
+
+\texttt{Elasticsearch}  has 2 type of nodes the data nodes and non data nodes.
+\\
+
+The \textbf{data nodes} hold and perform data related operations and the \textbf{non data nodes} are divided in three different node types:
+\begin{itemize}
+\item The \texttt{master node}, that controls the cluster and can behave as a coordinating node
+\item The \texttt{client nodes} that can neither hold data nor become the master node, it behaves as a smart router.
+\item the {tribe node} which can connect to different clusters.
+\end{itemize}
+\subsubsection{Searching in different nodes}
+\paragraph{Scatter Phase} Each data node executes the request locally
+\paragraph{Gather Phase} Manage the requests to the data nodes holding the data\\
+
+It is important to split the data from non data to data nodes, since indexing and searching can put a lot of pressure in the nodes resource. 
+\\
+
+It is very important that the master eligible nodes do as little work as possible since master nodes can behave as a coordinating nodes.
+
+\subsubsection{Split brain prevention}
+The minimum number of master eligible nodes in order to join a cluster must be 2 and the most appropriate at the moment of building an infrastructure follows the next equation:
+
+\begin{equation}
+(master\_elegible\_nodes / 2)+1
+\end{equation}
+In order to explain this, lets suppose a case when there are 3 nodes in the cluster and there is a network failure.
+\begin{itemize}
+\item In the \texttt{First case} if there is only a master eligible node as soon as the two parts of the cluster are not communicating each other they cannot find the master eligible node and choose themselves as a master creating a split brain, and when rejoining the cluster one of this master eligible nodes will have to be restarted loosing all its information.
+\item In the \texttt{Second case} if the minimum master nodes is 2, one of the nodes wont see another master eligible node so it wont be able to choose itself as a master node, when the communication is restored it can rejoin the cluster and work normally 
+\end{itemize}
+
+\subsection{Logstash}
+
+Logstash is used to collect, organize and processes all kind of data, its plugable architecture is very simple, it contains filters, inputs and outputs, it uses regular expressions which facilitate the methods of aggregating and grouping data.
+
+\paragraph{input} It is used for collecting data from different sources, adding the path or plugin from which the data will be retreived, \eg event logs, data stored in elasticsearch, etc.
+\paragraph{filter} To organize the data collected and to retreive only the fields needed, Logstash configuration has the possibility of adding filters, depending on the characteristics of the documents parsed, filters as \texttt{grok}, to search with the use of regular expresions over the document or \texttt{mutate} to omit the extraction of some fields or part of the documents. 
+\\
+
+Grok works by parsing text patterns, using regular expressions, and assigning them to an identifier.
+\\
+
+The syntax for a grok pattern is \%\{PATTERN:IDENTIFIER\}. A Logstash filter includes a sequence of grok patterns that matches and assigns various pieces of a log message to various identifiers, which is how the logs are given structure\cite{1}.
+
+\paragraph{output} To send the processed data to the servers for a furhter vizualization and analysis.
+
+\subsection{Kibana}
+
+Kibana is used for the vizualization and interaction with data filtered and stored in elasticsearch, it offers a web interface to search visualize and create dashboards for the overview of the usefull contents.
+\\
+
+Kibana offers the next visualization types:
+\begin{itemize}
+\item Area Chart
+\item Data table
+\item Line Chart
+\item Markdown widget
+\item Metric
+\item Pie chart
+\item Title map
+\item Vertical bar chart
+\end{itemize}
+
+One of the most usefull features of kibana is the aggregation builder for choosing the count, average, min, sum, max or cardinality, with this the metrics of the y or x axis can be changed sorting by different terms.
+\\
+
+There is a part very important to take into account in kibana since the extracting of data is made by word each field that is separated by a space is called an Analized fields. 
+\\
+
+Analized fields can trouble the search since instead of grouping by one single word, it sort by two words as if they where separated fields providing a bad information of the analysis of the data, meaning that if a specific word that represent only to one field but has a space will be discplayed as two different words and the analytics will display the information twice instead of only ones
+\\
+
+To avoid porblems with this it is very usefull to change this analyzed fields to not analyzed in the configuration files before indexing, since this fields cannot be changed after they had been pushed to elasticsearch.

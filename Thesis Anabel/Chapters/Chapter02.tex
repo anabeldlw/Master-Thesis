@@ -1,0 +1,319 @@
+% Chapter 2
+
+\chapter{Implementation and description} % Chapter title
+
+\section{Elasticsearch configuration}
+To start with the project, the ELK stack was configured with the next versions: elasticsearch-2.3.1, logstash-2.2.2 and kibana-4.5.0. To change specific configurations, the scripts that have to be changed are the \texttt{elasticsearch.yml logstash.yml} and \texttt{kibana.yml}.
+\\
+
+The default port for elasticsearch is 9200 and for kibana is 5601 both of this specifications and modules explained previously in this document can be changed in the respectly yml configuration files as well as with the elasticsearch REST APIs.
+\\ 
+
+To create an Elasticsearch Cluster, i added two new instances, with the parameteres shown below:
+\\
+
+
+\noindent \begin{tabular}{|c|c|c|c|}
+
+	\hline
+	Name & Elasticsearch-new & Elasticsearch-2.3.1 & Elasticsearch-1 & 
+	Node name & node-1 & node-2 & node-3 &
+	Network host & 172.16.98.133 & 172.16.98.133 & 172.16.98.53 \\ 
+	\cline{1-4}
+\end{tabular}
+\\
+\\
+
+For this to work properly the transport and discovery modules had to be enabled in the configuration files so the internal communication within the nodes in the cluster can be established and for the nodes to discover each other.
+\\
+
+The most important parameter for a node to join the cluster is the name they must all have in the configuration files the same name  for joining the cluster by default it is elasticsearch.
+\\
+
+The discovery module used is the built in discovery module for elasticsearch and by default, it provides unicast discovery, but can be extended to support cloud environments and other forms of discovery \cite{2}.
+\\
+
+
+This was done buy running 3 different instances in different servers, for testing there where available the next Servers for development.
+
+\paragraph{Servers provided by the company}
+\begin{itemize}
+\item ncerndobedev68.etv.nce.amadeus.net
+\item ncerndobedev69.etv.nce.amadeus.net
+\item ncerndobedev70.etv.nce.amadeus.net
+\end{itemize}
+
+\\
+
+The plugin marvel was configured and installed to ease the manage and the view of the cluster.
+\\
+ 
+Since as in the first part of this document explained there is the need of at least 3 diferent instances of Elasticsearch storing the nodes for avoiding split brain, I used the same server for running two elasticsearch instances just to check the shards allocation and status of the cluster. 
+\\
+
+The status of the cluster became green and therefore the shards where replicated and stored among the different elasticsearch instances in the cluster; this is a good alternative for resilience of the data and for avoiding data loss. 
+\\
+
+But since the most important for this project was to decrease as much as possible the data storage this was not the best option, but a good way of learning the allocation of shard replicas and documents.
+\\
+ 
+\section{Logstash file configuration}
+
+The first statistical overview that had to be performed, was for the final status of the regressions; since all the scripts per product are running at night and there are scripts failing, recovering and keeping their status, the need of an analysis of this data for reporting was highly important.\\
+
+The process to retreive the necessary data was with the use of logstash creating a configuration file that is running all the time, for knowing the status of the scripts in real time.\\
+
+The necessary parameters that are needed to retreive and analyse this data are:\\ 
+\begin{itemize}
+\item The \textbf{input} plugin in which must be defined the file path from which the data is going to be extracted, in this case the filepath of the log files that contain the status of the regressions. 
+
+\begin{lstlisting}[language=xml,frame=tb,caption={input plugin},label=lst:useless]
+input {
+file{
+path => "/remote/dspreg/status/RPT*/Dev/last/*/*.log"
+type => "logs"
+}} 
+\end{lstlisting}
+
+\item The \textbf{filter} plugin the one that will parse and group the data according to the needed parameters; in this case needed information was to retreive only some information from the log files.\\
+
+At this moment the specifications that are given to logstash is to retreive all the data that is contained in all the files previously asigned. 
+\\
+
+But what we would retreive in this case is only the raw data. For the processed data, one of the most usefull filter is the one explained in the logstash section, the grok filter, it offers the functionalities of regular expressions to matche all the lines that follow some pattern in a file.\\
+
+Next are shown the log pattern that must be matched and its correspondent grok filter. It is important to notice that for this part much more filters where used to process the data such as mutate filter to remove fields that will be displayed in kibana or date filter to retreive different patterns of data
+\end{itemize}
+\begin{lstlisting}[language=xml,frame=tb,caption={logfile }]
+2016-03-30 14:45:03,749 - FO_Line/FO_star/15-segmentAssociation/15-segmentAssociation.cry [root (data.py:auto_load_data:25)] [INFO] Loading data from D:\tts_shared\git\dev\regression_fo_line\data\common\common.py
+\end{lstlisting}
+
+\begin{lstlisting}[language=xml,frame=tb,caption={input plugin}]
+filter{
+grok{
+match => { "message" => "%{DATA:time}- %{DATA:script_path} \[%{DATA:logger} \(%{DATA:filename}\:%{DATA:function_name}\:%{DATA:line_number}\)] \[%{DATA:level}] %{GREEDYDATA:content}$
+}}
+\end{lstlisting}
+
+\begin{itemize}
+\item The \textbf{output} plugin provides the destination for the data, in this case we used the elasticsearch cluster, with the information of the hosts that are going to receive this data and the name of the new index with two different kind of formats, \texttt{"index\_name"} or \texttt{"logstash-index\_name-YYYY.MM.dd"}  \autoref{fig:Logfile}.
+\\
+
+The second one with its specific elasticsearch data pattern for the organization of the data to be searchable by a time frame; and the standard output for this case a json document to facilitate the search
+\end{itemize}
+
+\subsection{Analysis of the logstash file configuration} 
+After the installation of the ELK stack, and the logstash-logfile index previously explained, there was an importat factor that impacted the disk space in the node.
+\\
+
+Elasticsearch for disk shard allocation uses a configuration called \texttt{low watermark} and \texttt{high watermark}, to stop allocating new shards when it reaches a specific limit and to relocate shards in other nodes respectively. 
+\\
+
+This configuration can be changed in the \texttt{elasticsearch.yml} configuration files with the information of the time interval for checking the disk space in the cluster.
+\\
+
+The cluster in production is configured to stop retreiving data when the free disk space will have at least the same size as the one of the data that will be pushed.
+\\
+
+The index logstash-logfile size produces daily between 10 to 30 Megabytes, for my user the total amount of free disk space is 10G, acordingly to this data, the need of decreasing the amount of data is highly necessary.
+\\
+
+The steps that where taken to solve this problems where first to stop the logs being available after 7 days and next the compression of the data which will be explained further in next sections 
+
+
+\section{Rex files}
+
+Rex files are scripts containing the description of the transactions (the line or lines in a script failing or passing).
+\\
+
+This rex files parse the logfiles with the information that contains the TTSDashboard with parameters such as transaction counter, status ("KO", "OK", "N/A"), expected value, received value, query.
+\\
+
+The logs of this files where pushed and parsed into elasticsearch each hour, but nevertheless there were some fields that where lacking and some that where not needed.
+\\
+
+To parse this rex files instead of using a logstash file configuration it was used a python script since there was a lot of files that had to be parsed with different paths and formats.
+\\
+
+In \autoref{fig:ttsdashboard} it can be seen the fields transaction in the left part of the figure, query at the top, expected and received in the lower part of the figure. This  information is the one that represents the failure or passing of the scripts.
+\\
+
+This data is the one needed by the monitoring team to provide full reports of the status of the scripts, taking in consideration that there is a big amount of scripts and a big amount of transaction per each script, the extraction of this fields is very important to check the pattern of the errors and for correcting them inmediately.
+\\
+
+Considering the amount of data that had to be parsed, it was more efficient to use a python script to give more explicit specifications, this was done using different python libraries among all of them the most usefull are the ones explained in the next section.
+
+\section{Creation of indices}
+
+For the creation of new fields there are many different strategies, as previously shown they can be created with the logstash configuration files and with the index API in this ones there can be specified the number of shards and replicas, meaning that the number of times a document is splitted and replicated.
+\\
+
+For doing operations with multiple indices, and multiple fields for the documents, I have used the next API's and libraries it is worth to say that while indexing a document the format is similar; first a json object that indicates the fields that are going to be pushed, then the name of the field and the id of the documents. 
+
+\paragraph{pyelasticsearch} Pyelasticsearch makes the conversion between Python datastructures and JSON to be understood by ElasticSearch. For example date and datetime format for es 2016-04-23T14:26:01.
+\\
+
+Next it is shown the creation of a new index with a small example of the json object used to create different fields and wich can be seen in kibana in \autoref{fig:index}
+\\
+
+\begin{lstlisting}[language=xml,frame=tb,caption={Creation of a new index}]
+es.index("known_errors_index-" + import_day, "logs", data, id=data["custom_id"])
+\end{lstlisting}
+
+\begin{lstlisting}[language=xml,frame=tb,caption={Json object}]
+		data = {
+		"file_id": "file_" + hash_file,
+		"env": test_environment,
+		"product": product,
+		"status": status,
+		"short_filename": short_filename,
+		"transaction_counter": transaction_counter,
+		"expected": expected,
+		"received": received
+		}
+
+\end{lstlisting}
+
+
+
+\paragraph{Bulk indexing} One of the most important methods for adding a new index are: Bulk indexing methods, which perform many actions as: create, delete,update. 
+\\
+
+The parameters that can be added in this method are: actions \texttt{Index\_op()}, \texttt{delete\_op()}, \texttt{update\_op()}, \texttt{bulk\_chunks()}.
+
+\paragraph{Index} Index is the method that put a JSON document into a specific index to make it searchable.
+\\
+
+\textbf{Process:}\autoref{fig:process}
+\begin{itemize}
+\item Parsing from a directory 
+\item Convert transactions into a python dictionary
+\item Convert the dictionary to a json object
+\item Send to redis
+\end{itemize}
+
+After analysis of the rex file there were some fields that where not retreived. In this part of the project it was used the module ElementTree, because XML has an inherently hierarchical data format which can be represented with a tree \autoref{fig:tree}. 
+\\
+
+Element Tree provision the interactions with the whole document for parsing searching modifying and building XML files.
+The purpose of using Etree is for parsing the XML file and to retreive the needed content.
+\\
+
+From the XML file parsed the attribute value must be extracted from the variable attribute, for doing this Etree has a Xpath support. Xpath is a module that has the capability of locating the elements in a tree.
+\\
+
+For the next part of the project there were some python files that had to be improved from some scripts that were used already to parse data. 
+\\
+
+Next there was an index needed to process all the include that contained each script, the process to do it was first to check the repository and then clone or update it; then to use a subprocess that will search with GREP in all of the scripts an include message and it will push all the date into elasticsearch as shown in next figure the architecture used.
+
+\begin{figure}[bth]
+{\includegraphics[width=1\linewidth]{gfx/architecture}}\caption[Script architecture]{Script architecture.}
+{\label{fig:architecture}
+\end{figure}
+
+
+\section{Ignore and re-enter}
+
+There where a lot of errors in the scripts giving an information of ignore and re-enter, the next thing i had to do is to add a new index for this kind of errors, so later they can be easily searchable.
+\\
+
+The exception was that for each transaction in a new file, the new index must be created only taking into consideration the first transactions while the next ones omitted. 
+\\
+
+So after parsing each rex file a boolean is added setting it to false, after the parsing of the transaction and when an Ignore and Re-enter is found the new index is created and then the boolean is set to true for the next transactions so they are not taken into account.
+\\
+
+This error was created since at night the regressions were constantly running and some times in the same file and transaction the error ignore and re-enter apeared and next it dissapeared this was performed in the same way as previously.
+
+\section{Data compression}
+
+The memory allowed for users in the company was 10Gb, since elasticsearch was overloading the server for the amount of data that was parsed and as soon as the projects that the company receive will increase the performance of elasticsearch will decrease. 
+\\
+
+To avoid this to happen it is need to apply a mechanism for compression. First to study the performance with and without compression, there were performed some tests. First the initial state of the cluster, then the cluster without compression adding  3 new indices logstash-transaction index, known-errors-index and logstash file.
+\\
+
+With data compression there is a decreasement of the 38\% of the disk indices usage, this was shown after tests done while indexing 2 new indices logstash-file and logstash transaction, explained in the table below.
+\\
+
+\noindent \begin{tabular}{|c|c|c|c|}
+\cline{1-4}
+Status & Initial & Without compression & with compression & \hline 
+Total allocation[mb] & 255.1 & 465.9 & 425 & 
+logstash-transaction[mb] & - & 204.6 & 165.4 & 
+known-errors-index[kb] & - & 121.5 & 130.2 & 
+logstash-file[mb] & - & 6.4  & 5.6  \\
+\hline
+\end{tabular}
+\\
+\\
+
+
+The algorithm used is Deflate, the same one used behind zip, gzip and png; the deflate algorithm uses a combination of the LZ77 algorithm and the Huffman code, both lossless data compression algorithms so they can be perfectly reconstructed after retrieving the data
+\\
+
+LZ77, works finding the data that is repeated
+\\
+Huffman code It combines the weighing the nodes accordingly its frequency of appearance, and changing this into a binary tree, the weights can generate many trees 
+
+\section{Kibana visualizations}
+
+After parsing grouping and organizing the data in the web interface of kibana there are many options to create vizualizations and dashboards. 
+\\
+
+In this part is where it is visible the need of the specific date pattern format since every search can sorted by a specific data range. 
+\\
+
+The searches can be porformed with the REST API and it can be applied in many different scenarios. One of the examples of this kind of search is the one used to write the creation of a python script that will send mails with the information of the status of the regressions.
+\\
+
+With the index created known errors which is the one holding the data of the "Ignore and re-enter messages", and the index logstash-transaction holding all the number of executions performed per day storing all the transactions, it was able to make a comparison of the number of scripts executed versus the Ignore and re-enter encountered in the scripts.
+\\
+
+The format of the query was the next: 
+\begin{lstlisting}[language=xml,frame=tb,caption={query example}]
+{"aggs": {"executions": {"terms": {"field":"Product.raw","size": 100},
+"aggs": {"theSum": {"sum": {"field":"Number_of_Executions"}}}}}}}
+\end{lstlisting}
+\medskip
+
+
+The aggregations framework helps provide aggregated data based on a search query. It is based on simple building blocks called aggregations, that can be composed in order to build complex summaries of the data \cite{2}.
+\\
+
+Aggregations can be used to group the data or to sort the data by some specific filters, it is a very usefull tool for only retreiving the necesary data; in this project it was many times used for the organization of data and search of various fields filtering the answers.
+\\
+
+Finally and for concluding with the complete usage of ELK Stack the last task that had to be done was to create different visualizations and statistical graphs of the data parsed.
+\\
+
+Kibana interface offers 4 bookmarks: Discover Visualize, Dashboard, and Settings.
+\\
+
+In discover, there is a listed view of all the indices and documents, that had been extracted and pushed in elastic.
+\\
+
+In visualize there are different tools to create graphs pie charts, area charts, data tables to display the count of the document indexed, etc.
+\\
+
+In the dashboard bookmark can be added all the visualizations for displaying different types of analytics and to organize different views of the data.
+\\
+
+The settings bookmark is the one the one that is used from the begining to have the data that was pushed into elasticsearch the index pattern must be created here, indicating either if it uses a time-base event format or just an index name or pattern.
+\\
+
+If there is a time based index pattern, there is a field called Time-field name that can be used to sort the data in a time basis.
+\\
+
+Various visualizations where created at this point of the internship, with the index created and the analitics that where needed. \autoref{fig:kibana}
+
+\section{Analysis and results}
+
+After checking the final status in kibana, the indices Known\_errors\_index, logstash-logfile and include where created the shards where completely allocated, for the logstash-transaction files various documents where modified and added.
+\\
+
+The logstash configuration files where used for the creation of the logstash-logfile, and bulk indexing libraries for the creation of the two next indices, afterwards whith this data, vizualizations and reports where created to give an analysis of the specific data that was pushed into elastic.
+\\
+
+After the use of specific modules the elastic cluster was configured and the compression of the indices showed a 38\% of decreasement in the indices disk space usage. 
