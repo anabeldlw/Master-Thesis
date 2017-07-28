@@ -1,128 +1,194 @@
 % Chapter 1
+\chapter{Underlay Network}
+\section{OpenvSwitch architecture}
 
-\chapter{Introduction} % Chapter title
+When a packet first arrives to the switch it is sent straight to the controller to take the decisions of what to do with the packet if dropping the packet or setting a new flow entry for forwarding future similar packets.\\
 
-\label{ch:introduction} % For referencing the chapter elsewhere, use \autoref{ch:introduction} 
+The OpenVSwitch design is divided in two parts the kernel module and the userspace.
+The kernel module follows the instructions and allocate some cached results.\\
 
-%----------------------------------------------------------------------------------------
+In the userspace the ovs-switch matches the packets and openflow tables and then it sends this information to the controller to be stored in the ovsdb-server,  \autoref{fig:ovs} shows the process for the first packets and the different path for consecutive packets, with an example of sending them to Virtual machines.\\
 
-In this document it is described the implementation of ELK tools for the development of an infrastructure for storing searching and analysing data.\\
-\\
-There are presented many methods to collect search and display data to facilitate the search for content, taking into account various parameters needed by the company such as search performance, fast throughput, functional resource allocation and compression. \\
-\\
-The fundamentals for analysing data is to understand it, for an effective implementation and management of the resources and tools it is required to know the needs of the business, the amount of resources to choose the best tools to implement, etc.\\
-\\
-Therefore this document is divided in two main parts one for the comprehension and compilation of all the information needed to proceed with the tasks and the next one for the explanation of the implementation and detailed view of the final state of the project with its evaluation. \\ 
-\\
+
+\begin{figure}[bth]
+{\includegraphics[width=1.2\linewidth]{gfx/ovs}}\caption[OpenvSwitch Architecture]{OpenvSwitch Architecture}
+{\label{fig:ovs}
+\end{figure}
+
+\section{Containers} 
+
+Container shares the same kernel having less weight.\\
+
+Containers are processes that are isolated from the rest of the machine, it can encapsulate any application dependencies, multiple applications can coexist in the same environment, it also speedup the application development by building the application only once and being able to run in every kind of environment.\\
+
+Main characteristics applied to the model\\
+
+Docker containers add a new layer of virtualization to the environment one physical device can have many virtual machines and on each virtual machine there can be many containers; for the containers to communicate with Virtual machines and within other containers, the inter-connection is not as straightforward as traditional topologies.\\
+
+Since docker containers can access the kernel, docker provide a feature that will control the restrictions of the view of the system, namespaces are the ones that verify whether a user is allowed to access a specific file, process, etc.\\
+
+To get an insight of the network infrastructure of docker containers, I used The commands used for this are in the paper of Virtualization-A highlight on performance \cite{3} written by my previous tutor Guillaume Urvoy-Keller, and docker tutorials\cite{4}. I used all the information and summarized it in the next steps which are important for the development of this project.\\
+
+\section{Practical experimentation and issues}
+
+This project was developed in a PC with 8,00GB of RAM and a quad-core processor, I installed Ubuntu on a dual boot and on the top of the Ubuntu Operating system I installed Docker infrastructure.\\
+
+First it is important to know that docker containers create by default a docker0 network that at the moment a container start running it creates a veth peer link to the docker0 network and create a new network namespace in the container. To  eliminate this docker0 network while running a new container we can specify that we don’t want any network description to be attached to our running container with the flag –net=’none’   or we can  bring docker0 down.\\
+
+This will help in the future to avoid problems at the moment of appending to the underlying network and for migration of containers.\\
 \begin{itemize}
-\item The first part explains first the Company with its team tasks, the software used and the search methodology used before the implementation of ELK software, the resources provided and the key issues and difficulties that might be encountered through the process of installation,  in order to have a big picture of the problem to solve.\\
-\item Next it will be explained the ELK stack and all the components that were used in this project, the explanation of Elasticsearch, Logstash and Kibana, all the modules that will be executed and its functional and flexible architecture.\\ 
-\item Furthermore an overview of the Elastic cluster, its nodes and modules, all the terminology that is important to understand from the ELK stack architecture.\\ 
-\item The second part of the document present the use of the studied components and the explanation of the implementation of each one of the components in the stack.\\
-\item Next it will be explained all the formats and types of data that will be collected that was required for the company to log in the server.\\
-\item The algorithms for compression and the load of the cluster will be introduced in the final part of this document, with all the decisions that had been taken to improve the performance of search and allocation.
-\item Finally a brief analysis and the results if the optimization of the infrastructure. 
-\end{itemize} 
+\item Creation of a New container:\\
+\texttt{docker run --name=controller --net='none' -ti ubuntu /bin/bash}\\
+\item Two containers linked with the use of namespace:\\
+This information is important since in the installation of the services of Open Stack we can see a similar approach, they use the same way of configuring different nodes for stating which service is going to be the controller.\\
+\texttt{docker run -ti --name compute --link controller:controller ubuntu /bin/bash}\\
+This command links a container that was previously created (controller) with a new container created called compute, but it is only a one way connection, so for the compute node I created  the \texttt{/etc/hosts} file as well.
+\item Two containers with OpenvSwitch:\\
+\texttt{ovs-vsctl add-br s1}\\
+\texttt{ifconfig br1 192.168.0.1 netmask 255.255.255.0}
 
-\chapter{Description of the problem}
-\section{Description of the company and Aim of the project}
-A very important factor for the definition of the problem is the organization of the material and intensive study of the resources, limitations and  demands of the environment. For a general study of the problem, the company and tasks are explained following. \\
-\\
-Avisto partner of Advans Group, is a company that provides software solutions for many entities around France, it was founded in 1999 in Sophia Antipolis. \\ 
-\\
-Avisto is working together with Amadeus company, to provide the creation, monitoring and automation of scripts for the billing, ticketing, booking, etc. At the time of purchasing flight tickets with the Amadeus software. \\ 
-\\
-There are three team tasks:  
-\begin{itemize}
-\item\texttt{Coverage:} Its global responsibility is of the creation of new scripts after a test plan 
-\item\texttt{Automation:} it is in charge of the  Improvement and strengthen of Amadeus scripts 
-\item\texttt{Monitoring:} Controls the monitoring and investigation of all the regressions of all projects from both coverage and automation.
 \end{itemize}
 
-The aim of this project is to optimize tools for the monitoring and investigation of scripts  collecting the scripts information, adding and organizing the data in a ELK server and  then displaying the data in a web interface(Kibana), for a further analysis.
+Since docker containers have assigned each a unique namespace we have to create also the network namespace, for doing this we need to check the process id of the container that we are planning to join to my network and store its value in the file \texttt{/var/run/netns}\\
 
-\section{Environment and tools}
+To learn the process id of the controller:\\
+\texttt{docker inspect -f '{{.State.Pid}}' <process id of c1>}\\
+After this we get the process id and we create a namespace entry in \texttt{/var/run/netns} to specify the connection.\\
 
-\text{TTS DASHBOARD} \autoref{fig:ttsdashboard}}:
-It presents all the scripts and transactions (lines or group of lines in a script), it uses git repository to update the scripts and connect to the server.
-\\
+\texttt{pid=} #here we have to write the new process id\\
+\texttt{mkdir -p /var/run/netns}\\
+\texttt{ln -s /proc/$pid/ns/net /var/run/netns/$pid}\\
+
+Note: to check the process id: \texttt{docker ps}\\
  
-For each of this scripts there are 3 different environments(software release Amadeus):
-\begin{itemize}
-\item PDT (Product Definition Test System)
-\item FRT (Function Regression Test)  FVT(Function Validation Test)
-\item UAT (User Acceptance Test)
-\end{itemize}
-For PDT and UAT there are a daily new versions of the system under development, on FRT there are the system pre-production.
+Next it was created a peer of interfaces c1-eth0 corresponding to the network namespace of the container c1 and s1-eth1 corresponding to the OpenvSwitch s1 that was previously created; next it was assigned an ip and a default route \autoref{fig:dockerconnected}, shows this architecture.\\
+
+\begin{figure}[bth]
+{\includegraphics[width=1.2\linewidth]{gfx/dockerconnected}}\caption[OpenvSwitch connected with 2 docker containers]{OpenvSwitch connected with 2 docker containers}
+{\label{fig:dockerconnected}
+\end{figure}
+
+
+For the creation of the peer interfaces c1-eth0 and s1-eth1, and for binding s1-eth1 to the bridge s1 I did the next:\\
+
+\texttt{ip link add c1-eth0 type veth peer name s1-eth1}\\
+\texttt{ovs-vsctl add-port s1 s1-eth1}\\
+\texttt{ip link set s1-eth1 up}\\
+
+Next to bind c1-eth0 to the container network namespace assigning an ip\\
+
+\begin{lstlisting}[language=bash,frame=tb,caption={Network namespaces creation}]
+ip link set c1-eth0 netns $pid
+ip netns exec $pid ip link set c1-eth0 address 12:34:56:78:9a:bc
+ip netns exec $pid ip link set c1-eth0 up
+ip netns exec $pid ip addr add 192.168.0.0/24 dev c1-eth0
+ip netns exec $pid ip route add default via 192.168.0.1
+\end{lstlisting}\\
+
+All this experimentations provide many different ways for containers to be inter-connected between each other, attaching containers together, using linux bridges or docker containers, but since in the next part of the work I will be using Multi-host configuration and I will need to configure OpenStack Self Services, I tried it with OpenVSwitch and Linux Bridge to choose the best in performance.\\
+
+To choose the right approach I have tested different situations and architectures.
+I used docker containers since they are more lightweight than hypervisors they can run up to 10.000 of containers in one host, containers use cgroups and namespaces.\\
+
+\section{Analysis}
+\subsection{Linux bridge vs OpenvSwitch}\\
+
+When we run a new container or when several containers run they by default a create a linux bridge for connectivity between containers, the problem with linux bridges is that it has a limit in scalability since it only has 1024, since Docker containers and Openstack Virtual machines are in a different level of virutalization the best aproach is to use OpenvSwitch.\\
+
+\subsubsection{Benchmarking}
+
+Cpu Benchmarking:\\
+
+First I had use Docker containers and Vagrant virtual machines and with the use of sysbench with  1000 of computations for computing prime numbers with 2 CPUs available give to a result that the time average to perform the computation on a docker container was almost half quick as the time on Vagrant virtual machines.\\
+
+Network Benchmarking \\
+
+For the network benchmarking I run two nodes one as a client \texttt{iperf -c} and the other as a server \texttt{iperf -s} and transferring messages with the results shown in the next chart we can see that Docker with OVS is a faster approach.\\
+
+Ipef is used to check the network bandwith and the quality of the link.\\
+
+\autoref{fig:benchmark} presents the throughput of the iperf command by sending messages from 64MB with the -m option and so on decreasing the bandwith 
+
+\begin{figure}[bth]
+{\includegraphics[width=1.2\linewidth]{gfx/benchmark}}\caption[Throughput: performance after iperf command]{Throughput: performance after iperf command}
+{\label{fig:benchmark}
+\end{figure}\\
+
+The partial conclusion of this part of the project explains why I chose to use a Docker container with OpenvSwitch since as shown in the figure above this architecture has a more efficient support. 
+
+\marginpar{Docker with ovs provide a better throughput specially for smaller bandwidth}
 \\
 
-This scripts are presented in the TTS DASHBOARD which push the scripts that are stored in a Redis server, with the use of crontab each hour. \\
+\subsection{Docker with OpenStack}
 
-This scripts each have transactions with the information of the status \texttt{“OK”, “KO”, “N/A”}, this information is very useful for the monitoring team which will be explained next.\\
+Docker containers can run any kind of software they are configured to run, to learn how to configure each container it is important to know the different functions that docker can offer, the docker engine provides fast to test and deploy applications.\\
 
-For each of this 3 environments there is a team which has to monitor all the regressions in this environments for each product and send reports of the status of the script of each product. For this to be more effective there was the need of adding ELK stack to optimize the search and the filtering of the scripts. \\ 
-\\
+To develop the configuration of this applications docker engine uses dockerfile. Docker file contains the configuration that the service needs, it has linux command and docker commands for installation of packages.\\
 
-\chapter{Tools description and functionalities}
-\section{The ELK stack}
+For the configuration of the container to be saved, it is needed to commit the changes and save them, we can also save them in a repository, Docker has a SaaS service for sharing a repository called Dockerhub.\cite{4}\\
 
-The ElasticStack is composed of many different projects; to acomplish my experimentation I have used the set of projets to take data from different sources, format, search and analyze in real time. \\
+In this part of the project I pulled a container from the repository continues/openstack-controller, continues/openstack-network, continues/openstack-compute that has the basic configuration of OpenStack, and added the respective configuration provided by OpenStack self-services in the next section there is the explanation of the motive to choose OpenStack Self Services.\\
 
-The three most important projects that will be explained in this document are \textbf{Elasticsearch, Logstash} and \textbf{Kibana}. \\ 
+Example of dockerfile:\\
+\begin{lstlisting}[language=yaml,frame=tb,caption={Dockerfile}]
+FROM ubuntu:14.04
+RUN apt-get update \
+	&& apt-get -y install software-properties-common python-software-properties \
+	&& add-apt-repository -y cloud-archive:mitaka \
+	&& apt-get update \
+	&& apt-get -y dist-upgrade \
+	&& apt-get -y install python-mysqldb 
+RUN apt-get -y install neutron-plugin-ml2 neutron-plugin-openvswitch-agent \
+    neutron-l3-agent neutron-dhcp-agent
+EXPOSE 9696
+\end{lstlisting}\\
 
-The \texttt{Elasticsearch} project search data with the help of query language covering structured, unstructured and time-series data. \\ 
+Note: To save the containers configuration\\
+\texttt{Docker commit <process id> anabeldlw/openstack<service>:<version>}\\
 
-Elasticsearch is based on Lucene a very powerfull search engine, to index and search through full text. Elasticsearch became a project of Lucene to ease the use of this tools to index and manage the data.
-\\
+After commiting the configuration of the container we need to tag and push them to the repository.\\
 
-Elasticsearch now it is used by a big range of companies such as Facebook, Wikimedia, Mozilla, Amadeus IT Group, Netflix. etc. 
-\\
+First we learn the image id with the docker images command, then we need to copy the id for the name of the image as shown in the next example:\\
+\begin{lstlisting}[language=yaml,frame=tb,caption={Dockerfile}]
+$docker images
+REPOSITORY				       TAG	 IMAGE ID	   CREATED 	    SIZE
+anabeldlw/openstack_controller	tag1 71c0daa71ae8 3 days ago 	718MB
 
-\texttt{Logstash} process lists of logs events and structured data with a pluggable infrastructure with inputs, filters and outputs. \\ 
+$docker tag 71c0daa71ae8 anabeldlw/openstack_controller:tag1
+$docker push anabeldlw/openstack_controller:tag1
+\end{lstlisting}\\
 
-\texttt{Kibana} offers the visualization platform that allows to interact with the data.
+Network configuration on OpenStack:
 
-\subsection{Elasticsearch}
-\texttt{Elasticsearch} is used for gathering and searching data with the help of query language covering structured and unstructured data. 
-\\
+In this section there will be an explanation of the Self-service networks and the provider networks and why did I choose to use the Self-service networks.
+Provider networks:
+It is managed only by administrators, since they need the configuration of a physical network infrastructure. This networks only handle layer 2 connectivity for instances
+Self-service networks: 
+The advantage of the self-service networks over the provider network is that with self-services it is possible to enable projects to manage networks totally virtual, without involving administrators.
+The support of networks without overlapping IP addresses will be done by the use of the VXLAN and GRE protocols, in contrast to the provider networks that are using layer 2 segmentation.https://docs.openstack.org/mitaka/networking-guide/deploy-ovs-selfservice.html
+IPv4 usually use private IP addresses according to RFC7348 https://tools.ietf.org/html/rfc7348 with NAT and floating IP addresses on virtual routers to enable access from provider networks while IPv6 uses public IP addresses with static routes. 
+This network service use Layer 3 routers that reside in a network node in contrary to provider networks that rely in physical network. 
+After reviewing this descriptions for the network configuration of OpenStack I reached to the conclusion that for the network configuration of OpenStack to work in concordance with the one of docker containers, need to be the one fully virtualized, network self services.
+The requirements for the Self-service network are the next:
+In the controller node: 
+-2 network interfaces (management and provider)
+-sql service with  databases for OpenStack
+-keystone, glance, nova 
+-neutron and ML2 plugin
+In the network node:
+-layer 3 (routing component) and dependencies
+-3 network interfaces(management, provider and overlay)
+-Layer 2 agent
+Compute node: 
+-hypervisor(nova)
+-layer 2, DHCP, metadata
+-2 network interfaces (management, provider)
 
-\texttt{Elasticsearch} manages the performance of the cluster the storage and the management of data througout the node or nodes. 
+For the configuration of the VXLAN in the controller node, the VNI has to be chosen and as specified in the RFC7348 document https://tools.ietf.org/html/rfc7348 
+“The VNI is in an outer header that encapsulates the inner MAC frame originated by the VM”. 
+This document explain how the VNI is used for the encapsulation of inner MAC addresses produced by virtual machine addresses so if there is an overlapping of physical and virtual machine addresses, the VNI will identify the inner virtual machine addresses.
 
-\subsubsection{Elasticsearch parameters} To understand the elasticsearch performance it is important to have an insight of the glosary of the elements that an \texttt{Elasticsearch} infrastructure presents and the functionalities that it has.   
-\begin{itemize}
 
-\item \texttt{Index}: Collection of documents with similar characteristics.
-\item \texttt{Documents}:  Is the serialization of a JSON object with the names of some properties and its values,
-\item \texttt{Type}: It is a logical category.
-\item \texttt{Node}: It is a running instance of elasticsearch by default it takes names of Marvel Characters, it  joins automatically a cluster called Elasticsearch.
-\item \texttt{Shards}: Are subdivided indices into multiple pieces, so documents can be stored in different disks avoiding the possibility of not fitting in the disk of a single node , or of being too slow serving requests.
-\\
-
-The shards allow to horizontally scale, they are split to avoid network failures, if a shard goes offline there will be a backup.
-\\
-
-Replicas shards are never allocated on the same node an Elasticsearch cluster is made up of one or more nodes. Each of these nodes contains indexes which are split into multiple shards and then placed on various nodes throughout the cluster.\\
-\\
-
-There are three different shards that can be:\\
-
-\texttt{Red}: when primary shards are not ready.
-
-\texttt{Yellow}: the shard replicas had not been allocated, so the cluster consist of only one node.
-
-\texttt{Green}: when the cluster is fully operational and can allocate the shards and replicas in different machines in the cluster.\\
-\end{itemize}
-
-\subsubsection{Elasticsearch Modules}
-
-\texttt{Elasticsearch} contains modules with many functionalities; these modules can be static configured in the \texttt{elasticsearch.yml} file or dynamic with the cluster API. There are 13 modules from the wich i have chosen and configured the next:
-\paragraph{Marvel} With this module we can connect and search in the elasticsearch instance, with an HTML based interface.
-\paragraph{Transport} The transport module is used for internal communication within the nodes in the cluster, the communication is asynchronous, so it solves the c10k problem for optimization of network to handle many sockets at the same time 
-There are many factors considered for the optimization of this network sockets
-
-\marginpar{Concurrent connections (efficient scheduling of connections) is not directly proportional to the Requests per second(high throughput)}
-\paragraph{Discovery} The discovery module is the one responsible of discovering the nodes in the cluster and electing a master node.
-\\
 
 \texttt{Elasticsearch}  has 2 type of nodes the data nodes and non data nodes.
 \\
