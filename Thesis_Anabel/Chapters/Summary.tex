@@ -1,0 +1,23 @@
+
+
+\chapter{Summary and conclusions}
+
+Docker provides the functionality to connect within containers with namespaces as well as OpenStack, this works as if they were processes, helping any kind of configuration to be simpler and very flexible. \\
+
+In the containers the configuration can be changed and renewed any moment that we want and the possibility of rollbacking to previous states is possible and efficient and there is no need to add a lot of unnecessary configuration items, just what it is going to be used, therefore this is a very lightweighted model.\\
+
+With docker all the environment can be isolated, even the network configuration, providing the capabilities of managing all the components with only one controller node.\\
+
+There are two kind of network configuration one within containers or underlay network and one within virtual machines containing containers or overlay networks.\\
+
+In terms of underlay network configuration this thesis presented the configuration and benchmarking between various kinds of network underlay configuration, getting to the results that the most efficient comparing with all the technologies is the one with OpenvSwitch and docker containers.\\
+
+In terms of the overlay network this project explains how docker containers use the default multi-node configuration and its overlay plugin, creating a cluster of various nodes and everything controlled by one only master node, in the one where all the instructions are given.\\
+
+For the last part of the project, It was explained the use of checkpoints to restore the information of a service, this provided the functionality of freezing the information without losing the state of the service, to perform activities such as changing the containers of service, maintenance, etc.\\
+
+To create a checkpoint, the most important things to take into consideration are to have docker installed in all the nodes and to have all the needed components working together with the versions that are compatible to each other.\\
+
+The aim of this project was to get a deep knowledge about all the components that are involved in a cloud distribution in a SDN environment, and the most efficient ways to provide a service to be resilient and without having any visible repercussions at the moment of using the service.
+
+

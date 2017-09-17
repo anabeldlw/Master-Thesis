@@ -1,0 +1,124 @@
+%\documentclass{article}
+%\usepackage[utf8]{inputenc}
+
+%\title{Thesis Anabel}
+%\author{anabel_dlw }
+%\date{June 2017}
+
+%\begin{document}
+
+%\maketitle
+
+%\section{Introduction}
+
+%\end{document}
+
+
+\documentclass[
+		twoside,openright,titlepage,numbers=noenddot,headinclude,%1headlines,
+	 	cleardoublepage=empty,
+		dottedtoc, % Make page numbers in the table of contents flushed right with dots leading to them
+		BCOR=5mm,paper=a4,fontsize=11pt, % Binding correction, paper type and font size
+		ngerman,american, % Languages, change this to your language(s)
+		]{scrreprt} 
+                
+% Includes the file which contains all the document configurations and packages - make sure to edit this file
+\input{classicthesis-config}
+
+\addbibresource{Bibliography.bib} % The file housing your bibliography
+%\addbibresource[label=ownpubs]{Self_Publications.bib} % Uncomment for optional self-publications
+
+%\hyphenation{Put special hyphenation here}
+
+\begin{document}
+
+\frenchspacing % Reduces space after periods to make text more compact
+
+\raggedbottom % Makes all pages the height of the text on that page
+
+\selectlanguage{american} % Select your default language - e.g. american or ngerman
+
+%\renewcommand*{\bibname}{new name} % Uncomment to change the name of the bibliography
+%\setbibpreamble{} % Uncomment to include a preamble to the bibliography - some text before the reference list starts
+
+\pagenumbering{roman} % Roman page numbering prior to the start of the thesis content (i, ii, iii, etc)
+
+\pagestyle{plain} % Suppress headers for the pre-content pages
+
+%----------------------------------------------------------------------------------------
+%	PRE-CONTENT THESIS PAGES
+%----------------------------------------------------------------------------------------
+
+%\include{FrontBackMatter/Titlepage} % Main title page
+\include{FrontBackMatter/AGHTitle}
+
+%\include{FrontBackMatter/Titleback} % Back of the title page
+
+% Dedication page
+
+%\cleardoublepage\include{FrontBackMatter/Foreword} % Uncomment and create a Foreword.tex to include a foreword
+\newpage
+
+\include{FrontBackMatter/Acknowledgments}
+\include{FrontBackMatter/Abstract} % Abstract page
+
+\pagestyle{scrheadings} % Show chapter titles as headings
+\cleard
+\include{FrontBackMatter/Contents} % Contents, list of figures/tables/listings and acronyms
+
+
+
+\pagenumbering{arabic} % Arabic page numbering for thesis content (1, 2, 3, etc)
+%\setcounter{page}{90} % Uncomment to manually start the page counter at an arbitrary value (for example if you wish to count the pre-content pages in the page count)
+
+\clearpage % Avoids problems with pdfbookmark
+
+\include{Chapters/Introduction}
+
+%----------------------------------------------------------------------------------------
+%	THESIS CONTENT - CHAPTERS
+%----------------------------------------------------------------------------------------
+
+\ctparttext{This part of the thesis present the analysis of the software that will be implemented, the motivation for using each tool with a description and use cases of docker containers, it will be presented different networking parameters that can be used with docker containers and the explanation of why to choose OpenvSwitch with its architecture explained. \\ \medskip
+As there is a great range of possibilities of configuration in the underlay infrastructure, it will be explained how to create a container with a specific configuration and what kind of configuration we will need for OpenStack to match the requirements of this project.\\ \medskip
+This chapter will be mainly a representation of the functionality and performance of each of the components and it will give some answers to choose each component for the better configuration of this infrastructure.
+} % Text on the Part 1 page describing  the content in Part 1
+\part{Underlay Network} % First part of the thesis
+
+\include{Chapters/Chapter01} % Chapter 1
+
+
+%------------------------------------------------
+
+\ctparttext{This part of the project will present the overlay network, including cluster development with the swarm mode and the approach of isolating the OpenvSwitch component to provide a portable infrastructure solving the issue of replication of the content and resilience of the service provided}
+\part{Overlay Network} % Second part of the thesis
+
+\include{Chapters/Chapter02} % Chapter 2
+
+%------------------------------------------------
+
+\ctparttext{This chapter presents the terminology and uses of live migration, and how is it applied to this project, it gives a brief explanation of checkpoints and an experimental part of the checkpointing of a running container}
+\part{Container Migration} % Second part of the thesis
+
+\include{Chapters/Chapter03}
+
+
+
+
+
+----------------------------------------------------------------------------------------
+%	THESIS CONTENT - APPENDICES
+%----------------------------------------------------------------------------------------
+
+
+
+\part{Summary sources and apendix} % New part of the thesis for the appendix
+
+\include{Chapters/Summary}
+\include{Chapters/Chapter0A} % Appendix A
+%\include{Chapters/Chapter0B} % Appendix B - empty template
+
+
+%-----------------------------------------------------------------------------
+\include{FrontBackMatter/Bibliography} 
+\end{document}
